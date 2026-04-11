@@ -118,9 +118,17 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
 
 ## Security
 
-- **SQL Guardrails**: Only `SELECT` and `WITH` queries are allowed by default. DDL/DML statements (`DROP`, `DELETE`, `INSERT`, etc.) are blocked.
-- **Rate Limiting**: Configurable per-minute limits prevent abuse.
-- **Audit Logging**: All operations are logged with risk assessment.
+This server is designed for production use with multiple layers of protection:
+
+- **SQL Guardrails**: Only `SELECT` and `WITH` queries are allowed by default. DDL/DML statements (`DROP`, `DELETE`, `INSERT`, etc.) are blocked. Injection patterns (UNION, comments, multi-statement, file ops, time-based attacks) are detected and rejected.
+- **Tiered Rate Limiting**: Separate limits for read (120/min), write (30/min), and LLM (20/min) operations.
+- **Audit Logging**: Every operation is logged with risk assessment (low/medium/high). Sensitive fields are automatically redacted. Log files are created with secure permissions (owner-only read/write).
+- **Secret Isolation**: API keys are never exposed to tool handlers. Error responses from Metabase are sanitized to prevent credential leakage.
+- **Redirect Protection**: API key headers are never forwarded on HTTP redirects.
+
+### Data Privacy Note
+
+When using NLQ or insight tools (`ask_data`, `generate_insights`, etc.), **query result data is sent to the Anthropic API** for analysis. If your queries return sensitive data (PII, financial records, etc.), that data will be processed by Claude. Consider this when enabling NLQ features on databases containing sensitive information.
 
 ## Development
 
