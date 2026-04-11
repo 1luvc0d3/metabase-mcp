@@ -1,14 +1,31 @@
 # metabase-mcp
 
-An [MCP (Model Context Protocol)](https://modelcontextprotocol.io/) server that connects Claude to [Metabase](https://www.metabase.com/), enabling natural language data analysis, dashboard management, and SQL query execution.
+The most feature-rich [MCP](https://modelcontextprotocol.io/) server for [Metabase](https://www.metabase.com/). Ask questions about your data in plain English, manage dashboards, and run SQL queries -- all through Claude.
+
+## Why This One?
+
+There are other Metabase MCP servers. Here's why this one is different:
+
+| Feature | @1luvc0d3/metabase-mcp | Others |
+|---------|:--:|:--:|
+| Purpose-built tools | **28** | 4-19 |
+| Natural language to SQL | **Yes** | No |
+| AI-powered insights & trend analysis | **Yes** | No |
+| SQL injection protection | **Yes** | No |
+| Rate limiting | **Tiered** | No |
+| Audit logging with risk levels | **Yes** | No |
+| Server modes (read/write/full) | **Yes** | No |
+| Schema caching for fast NLQ | **Yes** | No |
 
 ## Features
 
 - **28 tools** across read, write, NLQ, and insight categories
-- **Natural language to SQL** conversion powered by Claude (optional)
-- **SQL guardrails** with injection detection and blocked pattern enforcement
-- **Rate limiting** and **audit logging** for security
-- **Database schema caching** for fast NLQ context
+- **Natural language to SQL** -- ask questions, get SQL + results (powered by Claude)
+- **SQL guardrails** -- injection detection, DDL/DML blocking, dangerous pattern enforcement
+- **Tiered rate limiting** -- configurable per-minute limits for read, write, and LLM operations
+- **Audit logging** -- every operation logged with risk assessment
+- **Three server modes** -- `read` (safe default), `write`, or `full` (with AI insights)
+- **Schema caching** -- fast NLQ context for large databases
 
 ## Quick Start
 
