@@ -597,7 +597,7 @@ describe('NLQ Tools Integration', () => {
           database_id: 1,
         });
 
-        expect(mockClient.executeQuery).toHaveBeenCalledWith(1, 'EXPLAIN SELECT * FROM users');
+        expect(mockClient.executeQuery).toHaveBeenCalledWith(1, 'EXPLAIN SELECT * FROM users LIMIT 1000');
       });
 
       it('passes execution plan to LLM service', async () => {

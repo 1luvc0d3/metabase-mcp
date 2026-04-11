@@ -137,12 +137,16 @@ export function registerNLQTools(server: McpServer, ctx: ToolContext): void {
         // Optionally get execution plan
         let executionPlan: string | undefined;
         if (database_id) {
-          try {
-            const explainSQL = `EXPLAIN ${sql}`;
-            const result = await ctx.metabaseClient.executeQuery(database_id, explainSQL);
-            executionPlan = JSON.stringify(result.data.rows, null, 2);
-          } catch {
-            // EXPLAIN might not be supported, continue without it
+          // Validate SQL through guardrails before executing EXPLAIN
+          const validation = ctx.sqlGuardrails.validate(sql);
+          if (validation.valid) {
+            try {
+              const explainSQL = `EXPLAIN ${validation.sanitizedSQL}`;
+              const result = await ctx.metabaseClient.executeQuery(database_id, explainSQL);
+              executionPlan = JSON.stringify(result.data.rows, null, 2);
+            } catch {
+              // EXPLAIN might not be supported, continue without it
+            }
           }
         }
 

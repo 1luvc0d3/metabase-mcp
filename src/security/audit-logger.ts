@@ -3,7 +3,7 @@
  * Logs all operations for security auditing and debugging
  */
 
-import { appendFileSync, existsSync, mkdirSync } from 'fs';
+import { appendFileSync, existsSync, mkdirSync, writeFileSync } from 'fs';
 import { dirname } from 'path';
 
 export interface AuditEvent {
@@ -28,11 +28,14 @@ export class AuditLogger {
     this.logFile = config.logFile ?? null;
     this.alertOnHighRisk = config.alertOnHighRisk ?? true;
 
-    // Ensure log directory exists
+    // Ensure log directory and file exist with secure permissions
     if (this.logFile) {
       const dir = dirname(this.logFile);
       if (!existsSync(dir)) {
-        mkdirSync(dir, { recursive: true });
+        mkdirSync(dir, { recursive: true, mode: 0o700 });
+      }
+      if (!existsSync(this.logFile)) {
+        writeFileSync(this.logFile, '', { mode: 0o600 });
       }
     }
   }

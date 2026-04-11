@@ -39,8 +39,17 @@ export class MetabaseError extends Error {
     return {
       error: this.message,
       statusCode: this.statusCode,
-      details: this.responseBody,
+      details: this.sanitizeResponse(this.responseBody),
     };
+  }
+
+  private sanitizeResponse(body: string): string {
+    // Truncate long responses and redact potential secrets
+    const truncated = body.length > 500 ? body.substring(0, 500) + '... [truncated]' : body;
+    return truncated
+      .replace(/sk-[a-zA-Z0-9_-]{20,}/g, '[REDACTED]')
+      .replace(/mb_[a-zA-Z0-9_-]{10,}/g, '[REDACTED]')
+      .replace(/Bearer\s+[a-zA-Z0-9._-]+/gi, 'Bearer [REDACTED]');
   }
 }
 

@@ -49,9 +49,12 @@ async function main() {
     logger.warn('ANTHROPIC_API_KEY not set - NLQ features disabled');
   }
 
-  // Create tool context
+  // Create tool context — expose only safe config subset (no API keys)
   const toolContext: ToolContext = {
-    config,
+    config: {
+      mode: config.mode,
+      metabase: { maxRows: config.metabase.maxRows },
+    },
     metabaseClient,
     llmService,
     sqlGuardrails,

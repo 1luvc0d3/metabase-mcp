@@ -3,7 +3,7 @@
  * Shared context passed to all tool handlers
  */
 
-import type { AppConfig } from '../client/types.js';
+import type { ServerMode } from '../client/types.js';
 import type { MetabaseClient } from '../client/metabase-client.js';
 import type { LLMService } from '../client/llm-service.js';
 import type { SQLGuardrails } from '../security/sql-guardrails.js';
@@ -12,8 +12,19 @@ import type { AuditLogger } from '../security/audit-logger.js';
 import type { SchemaManager } from '../utils/schema-manager.js';
 import type { Logger } from '../config.js';
 
+/**
+ * Subset of config exposed to tool handlers.
+ * Intentionally excludes API keys and other secrets.
+ */
+export interface ToolConfig {
+  mode: ServerMode;
+  metabase: {
+    maxRows: number;
+  };
+}
+
 export interface ToolContext {
-  config: AppConfig;
+  config: ToolConfig;
   metabaseClient: MetabaseClient;
   llmService: LLMService | null;
   sqlGuardrails: SQLGuardrails;
