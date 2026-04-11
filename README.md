@@ -6,7 +6,7 @@ The most feature-rich [MCP](https://modelcontextprotocol.io/) server for [Metaba
 
 There are other Metabase MCP servers. Here's why this one is different:
 
-| Feature | @1luvc0d3/metabase-mcp | Others |
+| Feature | @npm-ai-1luvc0d3/metabase-mcp | Others |
 |---------|:--:|:--:|
 | Purpose-built tools | **28** | 4-19 |
 | Natural language to SQL | **Yes** | No |
@@ -32,13 +32,13 @@ There are other Metabase MCP servers. Here's why this one is different:
 ### Using npx (recommended)
 
 ```bash
-npx @1luvc0d3/metabase-mcp
+npx @npm-ai-1luvc0d3/metabase-mcp
 ```
 
 ### Manual install
 
 ```bash
-npm install -g @1luvc0d3/metabase-mcp
+npm install -g @npm-ai-1luvc0d3/metabase-mcp
 metabase-mcp
 ```
 
@@ -83,7 +83,7 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
   "mcpServers": {
     "metabase": {
       "command": "npx",
-      "args": ["@1luvc0d3/metabase-mcp"],
+      "args": ["@npm-ai-1luvc0d3/metabase-mcp"],
       "env": {
         "METABASE_URL": "https://your-metabase.example.com",
         "METABASE_API_KEY": "mb_your_api_key_here",
