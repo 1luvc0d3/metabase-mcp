@@ -1,0 +1,15 @@
+tests/
+docs/
+.env*
+!.env.example
+.github/
+coverage/
+*.test.ts
+*.test.js
+test-connection.mjs
+vitest.config.ts
+tsconfig.json
+CLAUDE.md
+CONTRIBUTING.md
+metabase-mcp.mmd
+.eslintrc*
