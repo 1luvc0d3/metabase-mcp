@@ -15,13 +15,13 @@ An [MCP (Model Context Protocol)](https://modelcontextprotocol.io/) server that 
 ### Using npx (recommended)
 
 ```bash
-npx metabase-mcp
+npx @1luvc0d3/metabase-mcp
 ```
 
 ### Manual install
 
 ```bash
-npm install -g metabase-mcp
+npm install -g @1luvc0d3/metabase-mcp
 metabase-mcp
 ```
 
@@ -66,7 +66,7 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
   "mcpServers": {
     "metabase": {
       "command": "npx",
-      "args": ["metabase-mcp"],
+      "args": ["@1luvc0d3/metabase-mcp"],
       "env": {
         "METABASE_URL": "https://your-metabase.example.com",
         "METABASE_API_KEY": "mb_your_api_key_here",

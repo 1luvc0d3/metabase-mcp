@@ -1,5 +1,5 @@
 {
-  "name": "metabase-mcp",
+  "name": "@1luvc0d3/metabase-mcp",
   "version": "1.0.0",
   "description": "MCP server connecting Claude to Metabase for data analysis",
   "type": "module",
