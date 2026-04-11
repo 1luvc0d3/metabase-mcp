@@ -47,12 +47,18 @@ export class MetabaseClient {
 
       const response = await fetch(url, {
         ...options,
+        redirect: 'manual',
         signal: controller.signal,
         headers: {
           ...headers,
           ...options?.headers,
         },
       });
+
+      // Reject redirects to prevent leaking API key to redirect targets
+      if (response.status >= 300 && response.status < 400) {
+        throw new MetabaseError(response.status, 'Redirect not allowed');
+      }
 
       if (!response.ok) {
         const body = await response.text();
