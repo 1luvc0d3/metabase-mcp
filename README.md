@@ -184,6 +184,60 @@ This server is designed for production use with multiple layers of protection:
 
 When using NLQ or insight tools (`ask_data`, `generate_insights`, etc.), **query result data is sent to the Anthropic API** for analysis. If your queries return sensitive data (PII, financial records, etc.), that data will be processed by Claude. Consider this when enabling NLQ features on databases containing sensitive information.
 
+## Privacy Policy
+
+**What this extension collects:**
+- Your Metabase API key and URL (stored locally in the OS keychain — never transmitted to us)
+- Your Anthropic API key, if provided (stored locally in the OS keychain — never transmitted to us)
+- No telemetry, analytics, or usage data is collected by this extension
+
+**What this extension transmits:**
+- All Metabase API calls (queries, dashboards, cards) go directly from your machine to your own Metabase instance
+- NLQ/insight tool usage sends your natural-language question, database schema context, and query result samples to the Anthropic API for processing (governed by [Anthropic's privacy policy](https://www.anthropic.com/legal/privacy))
+- If you don't provide an Anthropic API key, no data is sent to Anthropic — NLQ and insight tools are simply disabled
+
+**Data retention:**
+- This extension does not retain any data. Audit logs (if enabled via `AUDIT_LOG_FILE`) are written to your local filesystem only, with owner-only permissions (0600)
+
+**Third-party privacy policies:**
+- [Metabase Privacy Policy](https://www.metabase.com/privacy)
+- [Anthropic Privacy Policy](https://www.anthropic.com/legal/privacy)
+
+**Reporting security issues:** See [SECURITY.md](SECURITY.md) for responsible disclosure.
+
+## Troubleshooting
+
+### "Cannot connect to Metabase" / 401 errors
+- Verify `METABASE_URL` is correct and reachable (test: `curl $METABASE_URL/api/health`)
+- Verify `METABASE_API_KEY` is valid (regenerate in Metabase Admin > Settings > API Keys if needed)
+- The API key must have permissions for the databases you want to query
+
+### "Blocked SQL pattern detected" errors
+- Only `SELECT` and `WITH` queries are allowed by default
+- Even inside a `SELECT`, patterns like `UNION SELECT`, SQL comments (`--`, `/* */`), `xp_cmdshell`, `INTO OUTFILE`, etc. are blocked
+- To execute DML (`INSERT`, `UPDATE`, `DELETE`), you must run in `write` or `full` mode AND the SQL must still pass guardrails (it won't — by design)
+
+### "Rate limit exceeded" errors
+- Default limits: 120 reads/min, 30 writes/min, 20 LLM calls/min
+- Adjust with `RATE_LIMIT_REQUESTS_PER_MINUTE` env var
+- Wait for the retry-after period shown in the error
+
+### NLQ tools unavailable
+- Requires `ANTHROPIC_API_KEY` — verify it's set
+- Check it starts with `sk-` and has remaining credits
+- Insight tools additionally require `MCP_MODE=full`
+
+### Claude Desktop: extension installed but tools not appearing
+- Fully quit and restart Claude Desktop
+- Check logs: `~/Library/Logs/Claude/mcp*.log` on macOS
+- Verify `node --version` is >= 18
+
+## Support
+
+- **Bug reports / feature requests:** [GitHub Issues](https://github.com/1luvc0d3/metabase-mcp/issues)
+- **Security vulnerabilities:** [Private disclosure](https://github.com/1luvc0d3/metabase-mcp/security/advisories/new) — see [SECURITY.md](SECURITY.md)
+- **Response time:** typically within 5 business days
+
 ## Development
 
 ```bash

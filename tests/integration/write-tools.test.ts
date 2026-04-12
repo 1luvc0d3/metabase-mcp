@@ -53,7 +53,7 @@ describe('Write Tools Integration', () => {
     registeredTools = new Map();
     const originalTool = server.tool.bind(server);
     vi.spyOn(server, 'tool').mockImplementation((name: string, ...args: any[]) => {
-      registeredTools.set(name, args);
+      const handler = args[args.length - 1]; registeredTools.set(name, { args, handler });
       return originalTool(name, ...args);
     });
 
@@ -66,7 +66,7 @@ describe('Write Tools Integration', () => {
     });
 
     it('creates a new card with valid SQL', async () => {
-      const handler = registeredTools.get('create_card')?.[2];
+      const handler = registeredTools.get('create_card')?.handler;
       const result = await handler({
         name: 'New Card',
         database_id: 1,
@@ -81,7 +81,7 @@ describe('Write Tools Integration', () => {
     });
 
     it('validates SQL before creating card', async () => {
-      const handler = registeredTools.get('create_card')?.[2];
+      const handler = registeredTools.get('create_card')?.handler;
       const result = await handler({
         name: 'Bad Card',
         database_id: 1,
@@ -94,7 +94,7 @@ describe('Write Tools Integration', () => {
     });
 
     it('passes all parameters to Metabase client', async () => {
-      const handler = registeredTools.get('create_card')?.[2];
+      const handler = registeredTools.get('create_card')?.handler;
       await handler({
         name: 'Test Card',
         database_id: 1,
@@ -117,7 +117,7 @@ describe('Write Tools Integration', () => {
 
   describe('update_card', () => {
     it('updates card name', async () => {
-      const handler = registeredTools.get('update_card')?.[2];
+      const handler = registeredTools.get('update_card')?.handler;
       const result = await handler({
         card_id: 1,
         name: 'Updated Name',
@@ -128,7 +128,7 @@ describe('Write Tools Integration', () => {
     });
 
     it('updates card SQL with validation', async () => {
-      const handler = registeredTools.get('update_card')?.[2];
+      const handler = registeredTools.get('update_card')?.handler;
       await handler({
         card_id: 1,
         sql: 'SELECT * FROM orders',
@@ -147,7 +147,7 @@ describe('Write Tools Integration', () => {
     });
 
     it('rejects invalid SQL updates', async () => {
-      const handler = registeredTools.get('update_card')?.[2];
+      const handler = registeredTools.get('update_card')?.handler;
       const result = await handler({
         card_id: 1,
         sql: 'DELETE FROM users',
@@ -158,7 +158,7 @@ describe('Write Tools Integration', () => {
     });
 
     it('updates multiple fields at once', async () => {
-      const handler = registeredTools.get('update_card')?.[2];
+      const handler = registeredTools.get('update_card')?.handler;
       await handler({
         card_id: 1,
         name: 'New Name',
@@ -176,7 +176,7 @@ describe('Write Tools Integration', () => {
 
   describe('delete_card', () => {
     it('deletes/archives a card', async () => {
-      const handler = registeredTools.get('delete_card')?.[2];
+      const handler = registeredTools.get('delete_card')?.handler;
       const result = await handler({ card_id: 1 });
 
       expect(result.isError).toBeFalsy();
@@ -188,7 +188,7 @@ describe('Write Tools Integration', () => {
 
   describe('create_dashboard', () => {
     it('creates a new dashboard', async () => {
-      const handler = registeredTools.get('create_dashboard')?.[2];
+      const handler = registeredTools.get('create_dashboard')?.handler;
       const result = await handler({
         name: 'New Dashboard',
         description: 'Dashboard description',
@@ -201,7 +201,7 @@ describe('Write Tools Integration', () => {
     });
 
     it('passes collection_id when provided', async () => {
-      const handler = registeredTools.get('create_dashboard')?.[2];
+      const handler = registeredTools.get('create_dashboard')?.handler;
       await handler({
         name: 'New Dashboard',
         collection_id: 5,
@@ -217,7 +217,7 @@ describe('Write Tools Integration', () => {
 
   describe('update_dashboard', () => {
     it('updates dashboard properties', async () => {
-      const handler = registeredTools.get('update_dashboard')?.[2];
+      const handler = registeredTools.get('update_dashboard')?.handler;
       const result = await handler({
         dashboard_id: 1,
         name: 'Updated Dashboard',
@@ -234,7 +234,7 @@ describe('Write Tools Integration', () => {
 
   describe('delete_dashboard', () => {
     it('deletes/archives a dashboard', async () => {
-      const handler = registeredTools.get('delete_dashboard')?.[2];
+      const handler = registeredTools.get('delete_dashboard')?.handler;
       const result = await handler({ dashboard_id: 1 });
 
       expect(result.isError).toBeFalsy();
@@ -244,7 +244,7 @@ describe('Write Tools Integration', () => {
 
   describe('add_card_to_dashboard', () => {
     it('adds card to dashboard with default position', async () => {
-      const handler = registeredTools.get('add_card_to_dashboard')?.[2];
+      const handler = registeredTools.get('add_card_to_dashboard')?.handler;
       const result = await handler({
         dashboard_id: 1,
         card_id: 5,
@@ -260,7 +260,7 @@ describe('Write Tools Integration', () => {
     });
 
     it('adds card with custom position and size', async () => {
-      const handler = registeredTools.get('add_card_to_dashboard')?.[2];
+      const handler = registeredTools.get('add_card_to_dashboard')?.handler;
       await handler({
         dashboard_id: 1,
         card_id: 5,
@@ -281,7 +281,7 @@ describe('Write Tools Integration', () => {
 
   describe('remove_card_from_dashboard', () => {
     it('removes card from dashboard', async () => {
-      const handler = registeredTools.get('remove_card_from_dashboard')?.[2];
+      const handler = registeredTools.get('remove_card_from_dashboard')?.handler;
       const result = await handler({
         dashboard_id: 1,
         dashcard_id: 10,
@@ -294,7 +294,7 @@ describe('Write Tools Integration', () => {
 
   describe('create_collection', () => {
     it('creates a new collection', async () => {
-      const handler = registeredTools.get('create_collection')?.[2];
+      const handler = registeredTools.get('create_collection')?.handler;
       const result = await handler({
         name: 'New Collection',
         description: 'Collection description',
@@ -313,7 +313,7 @@ describe('Write Tools Integration', () => {
     });
 
     it('creates nested collection with parent_id', async () => {
-      const handler = registeredTools.get('create_collection')?.[2];
+      const handler = registeredTools.get('create_collection')?.handler;
       await handler({
         name: 'Sub Collection',
         parent_id: 1,
@@ -329,7 +329,7 @@ describe('Write Tools Integration', () => {
 
   describe('move_to_collection', () => {
     it('moves card to collection', async () => {
-      const handler = registeredTools.get('move_to_collection')?.[2];
+      const handler = registeredTools.get('move_to_collection')?.handler;
       const result = await handler({
         item_type: 'card',
         item_id: 1,
@@ -341,7 +341,7 @@ describe('Write Tools Integration', () => {
     });
 
     it('moves dashboard to collection', async () => {
-      const handler = registeredTools.get('move_to_collection')?.[2];
+      const handler = registeredTools.get('move_to_collection')?.handler;
       await handler({
         item_type: 'dashboard',
         item_id: 1,
@@ -354,7 +354,7 @@ describe('Write Tools Integration', () => {
 
   describe('rate limiting', () => {
     it('enforces write rate limits', async () => {
-      const handler = registeredTools.get('create_card')?.[2];
+      const handler = registeredTools.get('create_card')?.handler;
 
       // Exhaust the write rate limit (30 per minute by default)
       for (let i = 0; i < 30; i++) {
@@ -376,7 +376,7 @@ describe('Write Tools Integration', () => {
     it('handles Metabase API errors', async () => {
       mockClient.createCard.mockRejectedValueOnce(new Error('API Error'));
 
-      const handler = registeredTools.get('create_card')?.[2];
+      const handler = registeredTools.get('create_card')?.handler;
       const result = await handler({
         name: 'Test',
         database_id: 1,
@@ -394,7 +394,7 @@ describe('Write Tools Integration', () => {
     it('logs successful write operations', async () => {
       const logSpy = vi.spyOn(context.auditLogger, 'logSuccess');
 
-      const handler = registeredTools.get('create_dashboard')?.[2];
+      const handler = registeredTools.get('create_dashboard')?.handler;
       await handler({ name: 'Test Dashboard' });
 
       expect(logSpy).toHaveBeenCalledWith('create_dashboard', expect.any(Object));
@@ -404,7 +404,7 @@ describe('Write Tools Integration', () => {
       const logSpy = vi.spyOn(context.auditLogger, 'logFailure');
       mockClient.createDashboard.mockRejectedValueOnce(new Error('Failed'));
 
-      const handler = registeredTools.get('create_dashboard')?.[2];
+      const handler = registeredTools.get('create_dashboard')?.handler;
       await handler({ name: 'Test Dashboard' });
 
       expect(logSpy).toHaveBeenCalled();
@@ -413,7 +413,7 @@ describe('Write Tools Integration', () => {
     it('logs blocked SQL in write operations', async () => {
       const logSpy = vi.spyOn(context.auditLogger, 'logBlocked');
 
-      const handler = registeredTools.get('create_card')?.[2];
+      const handler = registeredTools.get('create_card')?.handler;
       await handler({
         name: 'Bad Card',
         database_id: 1,

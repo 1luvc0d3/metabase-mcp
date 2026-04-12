@@ -25,6 +25,7 @@ export function registerWriteTools(server: McpServer, ctx: ToolContext): void {
       display: z.enum(['table', 'bar', 'line', 'pie', 'scalar', 'row', 'area', 'combo', 'pivot', 'smartscalar', 'progress', 'funnel', 'waterfall', 'map'])
         .default('table').describe('Visualization type'),
     },
+    { title: 'Create Card', destructiveHint: false, openWorldHint: true },
     async ({ name, database_id, sql, collection_id, description, display }) => {
       try {
         ctx.rateLimiter.checkLimit('write');
@@ -82,6 +83,7 @@ export function registerWriteTools(server: McpServer, ctx: ToolContext): void {
       collection_id: z.number().optional().describe('Move to collection'),
       display: z.string().optional().describe('Change visualization type'),
     },
+    { title: 'Update Card', destructiveHint: true, openWorldHint: true },
     async ({ card_id, name, description, sql, collection_id, display }) => {
       try {
         ctx.rateLimiter.checkLimit('write');
@@ -137,6 +139,7 @@ export function registerWriteTools(server: McpServer, ctx: ToolContext): void {
     {
       card_id: z.number().describe('Card ID to delete'),
     },
+    { title: 'Delete Card', destructiveHint: true, openWorldHint: true },
     async ({ card_id }) => {
       try {
         ctx.rateLimiter.checkLimit('write');
@@ -165,6 +168,7 @@ export function registerWriteTools(server: McpServer, ctx: ToolContext): void {
       description: z.string().optional().describe('Dashboard description'),
       collection_id: z.number().optional().describe('Collection to save to'),
     },
+    { title: 'Create Dashboard', destructiveHint: false, openWorldHint: true },
     async ({ name, description, collection_id }) => {
       try {
         ctx.rateLimiter.checkLimit('write');
@@ -205,6 +209,7 @@ export function registerWriteTools(server: McpServer, ctx: ToolContext): void {
       description: z.string().optional().describe('New description'),
       collection_id: z.number().optional().describe('Move to collection'),
     },
+    { title: 'Update Dashboard', destructiveHint: true, openWorldHint: true },
     async ({ dashboard_id, name, description, collection_id }) => {
       try {
         ctx.rateLimiter.checkLimit('write');
@@ -241,6 +246,7 @@ export function registerWriteTools(server: McpServer, ctx: ToolContext): void {
     {
       dashboard_id: z.number().describe('Dashboard ID to delete'),
     },
+    { title: 'Delete Dashboard', destructiveHint: true, openWorldHint: true },
     async ({ dashboard_id }) => {
       try {
         ctx.rateLimiter.checkLimit('write');
@@ -272,6 +278,7 @@ export function registerWriteTools(server: McpServer, ctx: ToolContext): void {
       size_x: z.number().optional().default(4).describe('Width (in grid units)'),
       size_y: z.number().optional().default(4).describe('Height (in grid units)'),
     },
+    { title: 'Add Card to Dashboard', destructiveHint: false, openWorldHint: true },
     async ({ dashboard_id, card_id, row, col, size_x, size_y }) => {
       try {
         ctx.rateLimiter.checkLimit('write');
@@ -306,6 +313,7 @@ export function registerWriteTools(server: McpServer, ctx: ToolContext): void {
       dashboard_id: z.number().describe('Dashboard ID'),
       dashcard_id: z.number().describe('Dashboard card ID (not the card ID)'),
     },
+    { title: 'Remove Card from Dashboard', destructiveHint: true, openWorldHint: true },
     async ({ dashboard_id, dashcard_id }) => {
       try {
         ctx.rateLimiter.checkLimit('write');
@@ -335,6 +343,7 @@ export function registerWriteTools(server: McpServer, ctx: ToolContext): void {
       color: z.string().optional().describe('Collection color (hex code)'),
       parent_id: z.number().optional().describe('Parent collection ID'),
     },
+    { title: 'Create Collection', destructiveHint: false, openWorldHint: true },
     async ({ name, description, color, parent_id }) => {
       try {
         ctx.rateLimiter.checkLimit('write');
@@ -375,6 +384,7 @@ export function registerWriteTools(server: McpServer, ctx: ToolContext): void {
       item_id: z.number().describe('ID of the item to move'),
       collection_id: z.number().describe('Target collection ID'),
     },
+    { title: 'Move to Collection', destructiveHint: true, openWorldHint: true },
     async ({ item_type, item_id, collection_id }) => {
       try {
         ctx.rateLimiter.checkLimit('write');

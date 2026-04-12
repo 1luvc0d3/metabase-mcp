@@ -61,7 +61,7 @@ describe('Read Tools Integration', () => {
     registeredTools = new Map();
     const originalTool = server.tool.bind(server);
     vi.spyOn(server, 'tool').mockImplementation((name: string, ...args: any[]) => {
-      registeredTools.set(name, args);
+      const handler = args[args.length - 1]; registeredTools.set(name, { args, handler });
       return originalTool(name, ...args);
     });
 
@@ -74,7 +74,7 @@ describe('Read Tools Integration', () => {
     });
 
     it('returns list of dashboards', async () => {
-      const handler = registeredTools.get('list_dashboards')?.[2];
+      const handler = registeredTools.get('list_dashboards')?.handler;
       const result = await handler({});
 
       expect(result.isError).toBeFalsy();
@@ -85,7 +85,7 @@ describe('Read Tools Integration', () => {
     });
 
     it('respects rate limiting', async () => {
-      const handler = registeredTools.get('list_dashboards')?.[2];
+      const handler = registeredTools.get('list_dashboards')?.handler;
 
       // Fill up rate limit
       for (let i = 0; i < 120; i++) {
@@ -99,7 +99,7 @@ describe('Read Tools Integration', () => {
 
   describe('get_dashboard', () => {
     it('returns dashboard with cards', async () => {
-      const handler = registeredTools.get('get_dashboard')?.[2];
+      const handler = registeredTools.get('get_dashboard')?.handler;
       const result = await handler({ dashboard_id: 1 });
 
       expect(result.isError).toBeFalsy();
@@ -110,7 +110,7 @@ describe('Read Tools Integration', () => {
     });
 
     it('calls Metabase client with correct ID', async () => {
-      const handler = registeredTools.get('get_dashboard')?.[2];
+      const handler = registeredTools.get('get_dashboard')?.handler;
       await handler({ dashboard_id: 42 });
 
       expect(mockClient.getDashboard).toHaveBeenCalledWith(42);
@@ -119,7 +119,7 @@ describe('Read Tools Integration', () => {
 
   describe('list_cards', () => {
     it('returns list of cards', async () => {
-      const handler = registeredTools.get('list_cards')?.[2];
+      const handler = registeredTools.get('list_cards')?.handler;
       const result = await handler({});
 
       expect(result.isError).toBeFalsy();
@@ -131,7 +131,7 @@ describe('Read Tools Integration', () => {
 
   describe('get_card', () => {
     it('returns card details', async () => {
-      const handler = registeredTools.get('get_card')?.[2];
+      const handler = registeredTools.get('get_card')?.handler;
       const result = await handler({ card_id: 1 });
 
       expect(result.isError).toBeFalsy();
@@ -143,7 +143,7 @@ describe('Read Tools Integration', () => {
 
   describe('execute_card', () => {
     it('executes card and returns results', async () => {
-      const handler = registeredTools.get('execute_card')?.[2];
+      const handler = registeredTools.get('execute_card')?.handler;
       const result = await handler({ card_id: 1 });
 
       expect(result.isError).toBeFalsy();
@@ -154,7 +154,7 @@ describe('Read Tools Integration', () => {
     });
 
     it('passes parameters to Metabase', async () => {
-      const handler = registeredTools.get('execute_card')?.[2];
+      const handler = registeredTools.get('execute_card')?.handler;
       await handler({ card_id: 1, parameters: { date: '2024-01-01' } });
 
       expect(mockClient.executeCard).toHaveBeenCalledWith(1, { date: '2024-01-01' });
@@ -163,7 +163,7 @@ describe('Read Tools Integration', () => {
     it('truncates results exceeding maxRows', async () => {
       mockClient.executeCard.mockResolvedValueOnce(largeQueryResult);
 
-      const handler = registeredTools.get('execute_card')?.[2];
+      const handler = registeredTools.get('execute_card')?.handler;
       const result = await handler({ card_id: 1 });
 
       const data = JSON.parse(result.content[0].text);
@@ -174,7 +174,7 @@ describe('Read Tools Integration', () => {
 
   describe('list_databases', () => {
     it('returns list of databases', async () => {
-      const handler = registeredTools.get('list_databases')?.[2];
+      const handler = registeredTools.get('list_databases')?.handler;
       const result = await handler({});
 
       expect(result.isError).toBeFalsy();
@@ -187,7 +187,7 @@ describe('Read Tools Integration', () => {
 
   describe('get_database_schema', () => {
     it('returns database schema', async () => {
-      const handler = registeredTools.get('get_database_schema')?.[2];
+      const handler = registeredTools.get('get_database_schema')?.handler;
       const result = await handler({ database_id: 1 });
 
       expect(result.isError).toBeFalsy();
@@ -197,7 +197,7 @@ describe('Read Tools Integration', () => {
     });
 
     it('caches schema after first call', async () => {
-      const handler = registeredTools.get('get_database_schema')?.[2];
+      const handler = registeredTools.get('get_database_schema')?.handler;
 
       await handler({ database_id: 1 });
       await handler({ database_id: 1 });
@@ -209,7 +209,7 @@ describe('Read Tools Integration', () => {
 
   describe('execute_query', () => {
     it('executes valid SQL query', async () => {
-      const handler = registeredTools.get('execute_query')?.[2];
+      const handler = registeredTools.get('execute_query')?.handler;
       const result = await handler({
         database_id: 1,
         sql: 'SELECT * FROM users LIMIT 10',
@@ -222,7 +222,7 @@ describe('Read Tools Integration', () => {
     });
 
     it('blocks dangerous SQL', async () => {
-      const handler = registeredTools.get('execute_query')?.[2];
+      const handler = registeredTools.get('execute_query')?.handler;
       const result = await handler({
         database_id: 1,
         sql: 'DROP TABLE users',
@@ -234,7 +234,7 @@ describe('Read Tools Integration', () => {
     });
 
     it('blocks SQL injection attempts', async () => {
-      const handler = registeredTools.get('execute_query')?.[2];
+      const handler = registeredTools.get('execute_query')?.handler;
       const result = await handler({
         database_id: 1,
         sql: "SELECT * FROM users; DROP TABLE users;--",
@@ -244,7 +244,7 @@ describe('Read Tools Integration', () => {
     });
 
     it('includes warnings in response', async () => {
-      const handler = registeredTools.get('execute_query')?.[2];
+      const handler = registeredTools.get('execute_query')?.handler;
       const result = await handler({
         database_id: 1,
         sql: 'SELECT * FROM users', // No LIMIT, should warn
@@ -256,7 +256,7 @@ describe('Read Tools Integration', () => {
     });
 
     it('sanitizes SQL before execution', async () => {
-      const handler = registeredTools.get('execute_query')?.[2];
+      const handler = registeredTools.get('execute_query')?.handler;
       await handler({
         database_id: 1,
         sql: '  SELECT    *   FROM   users   LIMIT 10  ',
@@ -276,7 +276,7 @@ describe('Read Tools Integration', () => {
         { id: 1, name: 'Sales', description: null, model: 'dashboard', collection_id: 1, collection_name: 'Analytics' },
       ]);
 
-      const handler = registeredTools.get('search_content')?.[2];
+      const handler = registeredTools.get('search_content')?.handler;
       const result = await handler({ query: 'sales' });
 
       expect(result.isError).toBeFalsy();
@@ -286,7 +286,7 @@ describe('Read Tools Integration', () => {
     });
 
     it('filters by content type', async () => {
-      const handler = registeredTools.get('search_content')?.[2];
+      const handler = registeredTools.get('search_content')?.handler;
       await handler({ query: 'sales', type: 'dashboard' });
 
       expect(mockClient.search).toHaveBeenCalledWith('sales', ['dashboard']);
@@ -295,7 +295,7 @@ describe('Read Tools Integration', () => {
 
   describe('get_collections', () => {
     it('returns list of collections', async () => {
-      const handler = registeredTools.get('get_collections')?.[2];
+      const handler = registeredTools.get('get_collections')?.handler;
       const result = await handler({});
 
       expect(result.isError).toBeFalsy();
@@ -309,7 +309,7 @@ describe('Read Tools Integration', () => {
     it('handles Metabase client errors gracefully', async () => {
       mockClient.getDashboards.mockRejectedValueOnce(new Error('Connection failed'));
 
-      const handler = registeredTools.get('list_dashboards')?.[2];
+      const handler = registeredTools.get('list_dashboards')?.handler;
       const result = await handler({});
 
       expect(result.isError).toBe(true);
@@ -322,7 +322,7 @@ describe('Read Tools Integration', () => {
     it('logs successful operations', async () => {
       const logSpy = vi.spyOn(context.auditLogger, 'logSuccess');
 
-      const handler = registeredTools.get('list_dashboards')?.[2];
+      const handler = registeredTools.get('list_dashboards')?.handler;
       await handler({});
 
       expect(logSpy).toHaveBeenCalledWith('list_dashboards', expect.any(Object));
@@ -332,7 +332,7 @@ describe('Read Tools Integration', () => {
       const logSpy = vi.spyOn(context.auditLogger, 'logFailure');
       mockClient.getDashboards.mockRejectedValueOnce(new Error('Failed'));
 
-      const handler = registeredTools.get('list_dashboards')?.[2];
+      const handler = registeredTools.get('list_dashboards')?.handler;
       await handler({});
 
       expect(logSpy).toHaveBeenCalled();
@@ -341,7 +341,7 @@ describe('Read Tools Integration', () => {
     it('logs blocked SQL queries', async () => {
       const logSpy = vi.spyOn(context.auditLogger, 'logBlocked');
 
-      const handler = registeredTools.get('execute_query')?.[2];
+      const handler = registeredTools.get('execute_query')?.handler;
       await handler({ database_id: 1, sql: 'DROP TABLE users' });
 
       expect(logSpy).toHaveBeenCalledWith('execute_query', expect.any(String), expect.any(Object));

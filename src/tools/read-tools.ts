@@ -17,6 +17,7 @@ export function registerReadTools(server: McpServer, ctx: ToolContext): void {
     'list_dashboards',
     'List all dashboards in Metabase',
     {},
+    { title: 'List Dashboards', readOnlyHint: true, idempotentHint: true, openWorldHint: true },
     async () => {
       try {
         ctx.rateLimiter.checkLimit('read');
@@ -49,6 +50,7 @@ export function registerReadTools(server: McpServer, ctx: ToolContext): void {
     {
       dashboard_id: z.number().describe('Dashboard ID'),
     },
+    { title: 'Get Dashboard', readOnlyHint: true, idempotentHint: true, openWorldHint: true },
     async ({ dashboard_id }) => {
       try {
         ctx.rateLimiter.checkLimit('read');
@@ -73,6 +75,7 @@ export function registerReadTools(server: McpServer, ctx: ToolContext): void {
       collection_id: z.number().optional().describe('Filter by collection ID'),
       limit: z.number().min(1).max(100).default(100).optional().describe('Max cards to return (default 100)'),
     },
+    { title: 'List Cards', readOnlyHint: true, idempotentHint: true, openWorldHint: true },
     async ({ collection_id, limit }) => {
       try {
         ctx.rateLimiter.checkLimit('read');
@@ -116,6 +119,7 @@ export function registerReadTools(server: McpServer, ctx: ToolContext): void {
     {
       card_id: z.number().describe('Card ID'),
     },
+    { title: 'Get Card', readOnlyHint: true, idempotentHint: true, openWorldHint: true },
     async ({ card_id }) => {
       try {
         ctx.rateLimiter.checkLimit('read');
@@ -140,6 +144,7 @@ export function registerReadTools(server: McpServer, ctx: ToolContext): void {
       card_id: z.number().describe('Card ID to execute'),
       parameters: z.record(z.unknown()).optional().describe('Optional parameters for parameterized queries'),
     },
+    { title: 'Execute Card', readOnlyHint: true, idempotentHint: true, openWorldHint: true },
     async ({ card_id, parameters }) => {
       try {
         ctx.rateLimiter.checkLimit('read');
@@ -174,6 +179,7 @@ export function registerReadTools(server: McpServer, ctx: ToolContext): void {
     'list_databases',
     'List all connected databases',
     {},
+    { title: 'List Databases', readOnlyHint: true, idempotentHint: true, openWorldHint: true },
     async () => {
       try {
         ctx.rateLimiter.checkLimit('read');
@@ -206,6 +212,7 @@ export function registerReadTools(server: McpServer, ctx: ToolContext): void {
     {
       database_id: z.number().describe('Database ID'),
     },
+    { title: 'Get Database Schema', readOnlyHint: true, idempotentHint: true, openWorldHint: true },
     async ({ database_id }) => {
       try {
         ctx.rateLimiter.checkLimit('read');
@@ -233,6 +240,7 @@ export function registerReadTools(server: McpServer, ctx: ToolContext): void {
       database_id: z.number().describe('Database ID to query'),
       sql: z.string().describe('SQL query (SELECT statements only)'),
     },
+    { title: 'Execute SQL Query', readOnlyHint: true, openWorldHint: true },
     async ({ database_id, sql }) => {
       try {
         ctx.rateLimiter.checkLimit('read');
@@ -289,6 +297,7 @@ export function registerReadTools(server: McpServer, ctx: ToolContext): void {
       type: z.enum(['card', 'dashboard', 'collection', 'database', 'table']).optional()
         .describe('Filter by content type'),
     },
+    { title: 'Search Content', readOnlyHint: true, idempotentHint: true, openWorldHint: true },
     async ({ query, type }) => {
       try {
         ctx.rateLimiter.checkLimit('read');
@@ -324,6 +333,7 @@ export function registerReadTools(server: McpServer, ctx: ToolContext): void {
     'get_collections',
     'List all collections',
     {},
+    { title: 'Get Collections', readOnlyHint: true, idempotentHint: true, openWorldHint: true },
     async () => {
       try {
         ctx.rateLimiter.checkLimit('read');
