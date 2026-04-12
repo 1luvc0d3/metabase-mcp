@@ -128,6 +128,48 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
 **Insights (full mode + ANTHROPIC_API_KEY)**
 `ask_data`, `generate_insights`, `compare_metrics`, `trend_analysis`
 
+## Examples
+
+### 1. Exploring your data
+
+> **You**: What dashboards do we have related to customer retention?
+
+Claude uses `search_content` to find retention-related dashboards, then `get_dashboard` to summarize the key metrics. You see a ranked list with the most relevant results.
+
+> **You**: Run the "Monthly Active Users" card for the last 90 days
+
+Claude calls `list_cards` to locate the card, then `execute_card` with the appropriate time filter. Results come back as a table you can ask follow-up questions about ("what was the biggest dip and when?").
+
+### 2. Ad-hoc SQL with safety rails
+
+> **You**: Show me the top 10 products by revenue last quarter from the sales database
+
+Claude calls `list_databases` to find the sales database, `get_database_schema` to inspect the relevant tables, then generates and runs a `SELECT` query via `execute_query`. The query is validated against the SQL guardrails (no `DROP`/`DELETE`/`UNION`, single statement only) before execution. Audit log entry is written with the query and row count.
+
+> **You**: DROP TABLE users
+
+Request is blocked. Claude surfaces: *"Blocked SQL pattern detected: DROP — this operation is not allowed."* The block is logged as a high-risk audit event.
+
+### 3. Natural language to SQL (requires ANTHROPIC_API_KEY)
+
+> **You**: Which support agents closed the most tickets this week, and how does that compare to last week?
+
+Claude uses `nlq_to_sql` with the database schema as context to generate a comparative SQL query. You can ask it to `explain_sql` in plain English before running, or `optimize_sql` to suggest performance improvements — all before hitting your database.
+
+### 4. Saving a reusable query as a card (write mode)
+
+> **You**: Save the MAU trend query we just ran as a card called "MAU — Last 90 Days" in the Growth collection
+
+Claude calls `get_collections` to find "Growth", then `create_card` with your validated SQL. The card now lives in your Metabase library and can be re-executed by name in future conversations via `execute_card` — no LLM tokens spent on re-generating the query.
+
+### 5. Automated insights on query results (full mode)
+
+> **You**: Run last quarter's revenue query and tell me what's interesting
+
+Claude uses `execute_query` to run the query, then `generate_insights` which asks the Claude API to identify trends, outliers, and recommendations. You get a structured summary: headline number, 3-5 bullet points, and suggested follow-up questions.
+
+> **Note on data privacy**: `generate_insights`, `ask_data`, `compare_metrics`, and `trend_analysis` send query result rows to the Anthropic API for analysis. See [Data Privacy Note](#data-privacy-note) for details.
+
 ## Security
 
 This server is designed for production use with multiple layers of protection:
