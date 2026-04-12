@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
 
     permissions:
-      contents: read
+      contents: write
       id-token: write
 
     steps:
@@ -36,3 +36,11 @@ jobs:
 
       - name: Publish to npm
         run: npm publish --access public --provenance
+
+      - name: Build .mcpb bundle
+        run: npm run build:mcpb
+
+      - name: Upload .mcpb to release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload ${{ github.event.release.tag_name }} metabase-mcp-*.mcpb

@@ -28,7 +28,8 @@
     "test:unit": "vitest run tests/unit",
     "test:integration": "vitest run tests/integration",
     "test:watch": "vitest",
-    "validate-config": "node dist/validate-config.js"
+    "validate-config": "node dist/validate-config.js",
+    "build:mcpb": "npm run build && node scripts/build-mcpb.mjs"
   },
   "keywords": [
     "metabase",

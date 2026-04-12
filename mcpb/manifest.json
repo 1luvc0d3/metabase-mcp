@@ -1,0 +1,115 @@
+{
+  "manifest_version": "0.4",
+  "name": "metabase-mcp",
+  "display_name": "Metabase",
+  "version": "1.1.0",
+  "description": "Query and manage Metabase dashboards, cards, and data via Claude",
+  "long_description": "Production-grade MCP server for Metabase with SQL injection guardrails, tiered rate limiting, and audit logging. Features 28 tools for reading, writing, natural-language-to-SQL generation, and AI-powered insights.",
+  "author": {
+    "name": "1luvc0d3",
+    "url": "https://github.com/1luvc0d3"
+  },
+  "homepage": "https://github.com/1luvc0d3/metabase-mcp",
+  "documentation": "https://github.com/1luvc0d3/metabase-mcp#readme",
+  "support": "https://github.com/1luvc0d3/metabase-mcp/issues",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/1luvc0d3/metabase-mcp.git"
+  },
+  "license": "MIT",
+  "icon": "icon.png",
+  "keywords": [
+    "metabase",
+    "mcp",
+    "sql",
+    "data-analysis",
+    "claude",
+    "natural-language",
+    "bi"
+  ],
+  "server": {
+    "type": "node",
+    "entry_point": "dist/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/dist/index.js"],
+      "env": {
+        "METABASE_URL": "${user_config.metabase_url}",
+        "METABASE_API_KEY": "${user_config.metabase_api_key}",
+        "MCP_MODE": "${user_config.mcp_mode}",
+        "ANTHROPIC_API_KEY": "${user_config.anthropic_api_key}"
+      }
+    }
+  },
+  "user_config": {
+    "metabase_url": {
+      "type": "string",
+      "title": "Metabase URL",
+      "description": "Your Metabase instance URL (e.g. https://metabase.example.com)",
+      "required": true
+    },
+    "metabase_api_key": {
+      "type": "string",
+      "title": "Metabase API Key",
+      "description": "Generate in Metabase Admin > Settings > API Keys. Stored securely in OS keychain.",
+      "sensitive": true,
+      "required": true
+    },
+    "mcp_mode": {
+      "type": "string",
+      "title": "Server Mode",
+      "description": "read (safe default), write (adds create/update/delete tools), or full (adds AI insights)",
+      "default": "read",
+      "required": false
+    },
+    "anthropic_api_key": {
+      "type": "string",
+      "title": "Anthropic API Key (optional)",
+      "description": "Enables natural-language-to-SQL and AI insight tools. Leave blank to disable.",
+      "sensitive": true,
+      "required": false
+    }
+  },
+  "tools": [
+    { "name": "list_dashboards", "description": "List all dashboards" },
+    { "name": "get_dashboard", "description": "Get a dashboard by ID" },
+    { "name": "list_cards", "description": "List all cards (saved questions)" },
+    { "name": "get_card", "description": "Get a card by ID" },
+    { "name": "execute_card", "description": "Execute a saved card query" },
+    { "name": "list_databases", "description": "List connected databases" },
+    { "name": "get_database_schema", "description": "Get tables and columns for a database" },
+    { "name": "execute_query", "description": "Execute a SELECT SQL query against a database" },
+    { "name": "search_content", "description": "Search across Metabase content" },
+    { "name": "get_collections", "description": "List collections" },
+    { "name": "create_card", "description": "Create a new card (saved question)" },
+    { "name": "update_card", "description": "Update an existing card" },
+    { "name": "delete_card", "description": "Archive a card" },
+    { "name": "create_dashboard", "description": "Create a new dashboard" },
+    { "name": "update_dashboard", "description": "Update an existing dashboard" },
+    { "name": "delete_dashboard", "description": "Archive a dashboard" },
+    { "name": "add_card_to_dashboard", "description": "Add a card to a dashboard" },
+    { "name": "remove_card_from_dashboard", "description": "Remove a card from a dashboard" },
+    { "name": "create_collection", "description": "Create a new collection" },
+    { "name": "move_to_collection", "description": "Move a card or dashboard to a different collection" },
+    { "name": "nlq_to_sql", "description": "Convert natural language question to SQL" },
+    { "name": "explain_sql", "description": "Explain what a SQL query does in plain English" },
+    { "name": "optimize_sql", "description": "Suggest optimizations for a SQL query" },
+    { "name": "validate_sql", "description": "Check SQL for syntax and security issues" },
+    { "name": "ask_data", "description": "Ask a question about your data in natural language" },
+    { "name": "generate_insights", "description": "Generate automated insights from query results" },
+    { "name": "compare_metrics", "description": "Compare metrics across time periods or segments" },
+    { "name": "trend_analysis", "description": "Analyze trends and temporal patterns in data" }
+  ],
+  "privacy_policies": [
+    "https://www.metabase.com/privacy",
+    "https://www.anthropic.com/legal/privacy",
+    "https://github.com/1luvc0d3/metabase-mcp/blob/main/SECURITY.md"
+  ],
+  "compatibility": {
+    "claude_desktop": ">=0.10.0",
+    "platforms": ["darwin", "win32", "linux"],
+    "runtimes": {
+      "node": ">=18.0.0"
+    }
+  }
+}
