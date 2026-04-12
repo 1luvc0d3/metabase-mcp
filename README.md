@@ -1,5 +1,11 @@
 # metabase-mcp
 
+[![npm version](https://img.shields.io/npm/v/@ai-1luvc0d3/metabase-mcp.svg)](https://www.npmjs.com/package/@ai-1luvc0d3/metabase-mcp)
+[![npm downloads](https://img.shields.io/npm/dw/@ai-1luvc0d3/metabase-mcp.svg)](https://www.npmjs.com/package/@ai-1luvc0d3/metabase-mcp)
+[![CI](https://github.com/1luvc0d3/metabase-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/1luvc0d3/metabase-mcp/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Node](https://img.shields.io/node/v/@ai-1luvc0d3/metabase-mcp.svg)](https://nodejs.org)
+
 The most feature-rich [MCP](https://modelcontextprotocol.io/) server for [Metabase](https://www.metabase.com/). Ask questions about your data in plain English, manage dashboards, and run SQL queries -- all through Claude.
 
 ## Why This One?
