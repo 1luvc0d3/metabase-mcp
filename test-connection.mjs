@@ -37,7 +37,7 @@ if (!apiKey) {
   process.exit(1);
 }
 
-console.log('API Key:', apiKey.substring(0, 15) + '...');
+console.log('API Key: [configured]');
 console.log('');
 
 const headers = {
