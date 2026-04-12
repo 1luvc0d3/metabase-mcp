@@ -3,6 +3,8 @@ node_modules/
 
 # Build output
 dist/
+build/
+*.mcpb
 
 # Environment files
 .env

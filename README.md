@@ -35,7 +35,13 @@ There are other Metabase MCP servers. Here's why this one is different:
 
 ## Quick Start
 
-### Using npx (recommended)
+### One-click install (recommended)
+
+1. Download the latest `metabase-mcp-*.mcpb` from [GitHub Releases](https://github.com/1luvc0d3/metabase-mcp/releases/latest)
+2. Double-click to install in Claude Desktop
+3. Enter your Metabase URL and API key when prompted — stored securely in the OS keychain
+
+### Using npx
 
 ```bash
 npx @ai-1luvc0d3/metabase-mcp
