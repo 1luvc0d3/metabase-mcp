@@ -28,6 +28,7 @@ export function registerNLQTools(server: McpServer, ctx: ToolContext): void {
       database_id: z.number().describe('Database ID to query'),
       tables: z.array(z.string()).optional().describe('Specific tables to consider (for large schemas)'),
     },
+    { title: 'Natural Language to SQL', readOnlyHint: true, openWorldHint: true },
     async ({ question, database_id, tables }) => {
       try {
         ctx.rateLimiter.checkLimit('nlq');
@@ -102,6 +103,7 @@ export function registerNLQTools(server: McpServer, ctx: ToolContext): void {
     {
       sql: z.string().describe('SQL query to explain'),
     },
+    { title: 'Explain SQL', readOnlyHint: true, openWorldHint: true },
     async ({ sql }) => {
       try {
         ctx.rateLimiter.checkLimit('nlq');
@@ -130,6 +132,7 @@ export function registerNLQTools(server: McpServer, ctx: ToolContext): void {
       sql: z.string().describe('SQL query to optimize'),
       database_id: z.number().optional().describe('Database ID (to run EXPLAIN if available)'),
     },
+    { title: 'Optimize SQL', readOnlyHint: true, openWorldHint: true },
     async ({ sql, database_id }) => {
       try {
         ctx.rateLimiter.checkLimit('nlq');
@@ -174,6 +177,7 @@ export function registerNLQTools(server: McpServer, ctx: ToolContext): void {
     {
       sql: z.string().describe('SQL query to validate'),
     },
+    { title: 'Validate SQL', readOnlyHint: true, idempotentHint: true },
     async ({ sql }) => {
       try {
         ctx.rateLimiter.checkLimit('read'); // Use read tier since no LLM call

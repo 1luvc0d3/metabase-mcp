@@ -105,7 +105,7 @@ describe('NLQ Tools Integration', () => {
     registeredTools = new Map();
     const originalTool = server.tool.bind(server);
     vi.spyOn(server, 'tool').mockImplementation((name: string, ...args: any[]) => {
-      registeredTools.set(name, args);
+      const handler = args[args.length - 1]; registeredTools.set(name, { args, handler });
       return originalTool(name, ...args);
     });
 
@@ -151,7 +151,7 @@ describe('NLQ Tools Integration', () => {
   describe('nlq_to_sql', () => {
     describe('Successful SQL Generation', () => {
       it('converts natural language question to SQL', async () => {
-        const handler = registeredTools.get('nlq_to_sql')?.[2];
+        const handler = registeredTools.get('nlq_to_sql')?.handler;
         const result = await handler({
           question: 'How many orders does each user have?',
           database_id: 1,
@@ -165,7 +165,7 @@ describe('NLQ Tools Integration', () => {
       });
 
       it('includes explanation in response when available', async () => {
-        const handler = registeredTools.get('nlq_to_sql')?.[2];
+        const handler = registeredTools.get('nlq_to_sql')?.handler;
         const result = await handler({
           question: 'Show me all active users',
           database_id: 1,
@@ -177,7 +177,7 @@ describe('NLQ Tools Integration', () => {
       });
 
       it('fetches database schema for SQL generation', async () => {
-        const handler = registeredTools.get('nlq_to_sql')?.[2];
+        const handler = registeredTools.get('nlq_to_sql')?.handler;
         await handler({
           question: 'List all products',
           database_id: 1,
@@ -187,7 +187,7 @@ describe('NLQ Tools Integration', () => {
       });
 
       it('passes schema to LLM service', async () => {
-        const handler = registeredTools.get('nlq_to_sql')?.[2];
+        const handler = registeredTools.get('nlq_to_sql')?.handler;
         await handler({
           question: 'Get user emails',
           database_id: 1,
@@ -206,7 +206,7 @@ describe('NLQ Tools Integration', () => {
 
     describe('Table Filtering', () => {
       it('filters schema to specified tables when tables parameter is provided', async () => {
-        const handler = registeredTools.get('nlq_to_sql')?.[2];
+        const handler = registeredTools.get('nlq_to_sql')?.handler;
         await handler({
           question: 'Show user order counts',
           database_id: 1,
@@ -225,7 +225,7 @@ describe('NLQ Tools Integration', () => {
       });
 
       it('handles case-insensitive table name filtering', async () => {
-        const handler = registeredTools.get('nlq_to_sql')?.[2];
+        const handler = registeredTools.get('nlq_to_sql')?.handler;
         await handler({
           question: 'Show user order counts',
           database_id: 1,
@@ -239,7 +239,7 @@ describe('NLQ Tools Integration', () => {
       });
 
       it('returns empty tables array when no matching tables found', async () => {
-        const handler = registeredTools.get('nlq_to_sql')?.[2];
+        const handler = registeredTools.get('nlq_to_sql')?.handler;
         await handler({
           question: 'Show data from nonexistent table',
           database_id: 1,
@@ -271,7 +271,7 @@ describe('NLQ Tools Integration', () => {
           tables: largeTables,
         });
 
-        const handler = registeredTools.get('nlq_to_sql')?.[2];
+        const handler = registeredTools.get('nlq_to_sql')?.handler;
         await handler({
           question: 'Show me sales data',
           database_id: 1,
@@ -282,7 +282,7 @@ describe('NLQ Tools Integration', () => {
       });
 
       it('does not filter tables for small schemas (<=50 tables)', async () => {
-        const handler = registeredTools.get('nlq_to_sql')?.[2];
+        const handler = registeredTools.get('nlq_to_sql')?.handler;
         await handler({
           question: 'Show me user data',
           database_id: 1,
@@ -295,7 +295,7 @@ describe('NLQ Tools Integration', () => {
 
     describe('SQL Validation', () => {
       it('validates generated SQL before returning', async () => {
-        const handler = registeredTools.get('nlq_to_sql')?.[2];
+        const handler = registeredTools.get('nlq_to_sql')?.handler;
         const result = await handler({
           question: 'Get all users',
           database_id: 1,
@@ -313,7 +313,7 @@ describe('NLQ Tools Integration', () => {
           explanation: 'Dangerous query',
         });
 
-        const handler = registeredTools.get('nlq_to_sql')?.[2];
+        const handler = registeredTools.get('nlq_to_sql')?.handler;
         const result = await handler({
           question: 'Delete all users',
           database_id: 1,
@@ -327,7 +327,7 @@ describe('NLQ Tools Integration', () => {
       });
 
       it('returns sanitized SQL in response', async () => {
-        const handler = registeredTools.get('nlq_to_sql')?.[2];
+        const handler = registeredTools.get('nlq_to_sql')?.handler;
         const result = await handler({
           question: 'Get all users',
           database_id: 1,
@@ -346,7 +346,7 @@ describe('NLQ Tools Integration', () => {
           explanation: 'Query without LIMIT',
         });
 
-        const handler = registeredTools.get('nlq_to_sql')?.[2];
+        const handler = registeredTools.get('nlq_to_sql')?.handler;
         const result = await handler({
           question: 'Get all users',
           database_id: 1,
@@ -362,7 +362,7 @@ describe('NLQ Tools Integration', () => {
       it('returns error when LLM service fails', async () => {
         mockLLMService.generateSQL.mockRejectedValueOnce(new Error('API rate limit exceeded'));
 
-        const handler = registeredTools.get('nlq_to_sql')?.[2];
+        const handler = registeredTools.get('nlq_to_sql')?.handler;
         const result = await handler({
           question: 'Get all users',
           database_id: 1,
@@ -376,7 +376,7 @@ describe('NLQ Tools Integration', () => {
       it('returns error when database schema fetch fails', async () => {
         mockClient.getDatabaseSchema.mockRejectedValueOnce(new Error('Database not found'));
 
-        const handler = registeredTools.get('nlq_to_sql')?.[2];
+        const handler = registeredTools.get('nlq_to_sql')?.handler;
         const result = await handler({
           question: 'Get all users',
           database_id: 999,
@@ -388,7 +388,7 @@ describe('NLQ Tools Integration', () => {
       });
 
       it('respects rate limiting', async () => {
-        const handler = registeredTools.get('nlq_to_sql')?.[2];
+        const handler = registeredTools.get('nlq_to_sql')?.handler;
 
         // Fill up NLQ rate limit (default is 20 per minute)
         for (let i = 0; i < 20; i++) {
@@ -408,7 +408,7 @@ describe('NLQ Tools Integration', () => {
       it('logs successful SQL generation', async () => {
         const logSuccessSpy = vi.spyOn(context.auditLogger, 'logSuccess');
 
-        const handler = registeredTools.get('nlq_to_sql')?.[2];
+        const handler = registeredTools.get('nlq_to_sql')?.handler;
         await handler({
           question: 'Get all users',
           database_id: 1,
@@ -424,7 +424,7 @@ describe('NLQ Tools Integration', () => {
         const logFailureSpy = vi.spyOn(context.auditLogger, 'logFailure');
         mockLLMService.generateSQL.mockRejectedValueOnce(new Error('LLM error'));
 
-        const handler = registeredTools.get('nlq_to_sql')?.[2];
+        const handler = registeredTools.get('nlq_to_sql')?.handler;
         await handler({
           question: 'Get all users',
           database_id: 1,
@@ -440,7 +440,7 @@ describe('NLQ Tools Integration', () => {
           explanation: 'Union injection',
         });
 
-        const handler = registeredTools.get('nlq_to_sql')?.[2];
+        const handler = registeredTools.get('nlq_to_sql')?.handler;
         await handler({
           question: 'Get passwords',
           database_id: 1,
@@ -458,7 +458,7 @@ describe('NLQ Tools Integration', () => {
   describe('explain_sql', () => {
     describe('Successful Explanation', () => {
       it('explains SQL query in plain English', async () => {
-        const handler = registeredTools.get('explain_sql')?.[2];
+        const handler = registeredTools.get('explain_sql')?.handler;
         const result = await handler({
           sql: 'SELECT * FROM users WHERE active = true LIMIT 10',
         });
@@ -472,7 +472,7 @@ describe('NLQ Tools Integration', () => {
 
       it('returns the original SQL along with explanation', async () => {
         const testSQL = 'SELECT COUNT(*) FROM orders GROUP BY status';
-        const handler = registeredTools.get('explain_sql')?.[2];
+        const handler = registeredTools.get('explain_sql')?.handler;
         const result = await handler({
           sql: testSQL,
         });
@@ -483,7 +483,7 @@ describe('NLQ Tools Integration', () => {
 
       it('calls LLM service with the SQL query', async () => {
         const testSQL = 'SELECT * FROM products WHERE price > 100';
-        const handler = registeredTools.get('explain_sql')?.[2];
+        const handler = registeredTools.get('explain_sql')?.handler;
         await handler({ sql: testSQL });
 
         expect(mockLLMService.explainSQL).toHaveBeenCalledWith(testSQL);
@@ -494,7 +494,7 @@ describe('NLQ Tools Integration', () => {
       it('returns error when LLM service fails', async () => {
         mockLLMService.explainSQL.mockRejectedValueOnce(new Error('Explanation service unavailable'));
 
-        const handler = registeredTools.get('explain_sql')?.[2];
+        const handler = registeredTools.get('explain_sql')?.handler;
         const result = await handler({
           sql: 'SELECT * FROM users',
         });
@@ -505,7 +505,7 @@ describe('NLQ Tools Integration', () => {
       });
 
       it('respects rate limiting', async () => {
-        const handler = registeredTools.get('explain_sql')?.[2];
+        const handler = registeredTools.get('explain_sql')?.handler;
 
         // Fill up NLQ rate limit
         for (let i = 0; i < 20; i++) {
@@ -524,7 +524,7 @@ describe('NLQ Tools Integration', () => {
       it('logs successful explanation', async () => {
         const logSuccessSpy = vi.spyOn(context.auditLogger, 'logSuccess');
 
-        const handler = registeredTools.get('explain_sql')?.[2];
+        const handler = registeredTools.get('explain_sql')?.handler;
         await handler({
           sql: 'SELECT * FROM users LIMIT 10',
         });
@@ -538,7 +538,7 @@ describe('NLQ Tools Integration', () => {
         const logFailureSpy = vi.spyOn(context.auditLogger, 'logFailure');
         mockLLMService.explainSQL.mockRejectedValueOnce(new Error('LLM error'));
 
-        const handler = registeredTools.get('explain_sql')?.[2];
+        const handler = registeredTools.get('explain_sql')?.handler;
         await handler({ sql: 'SELECT 1' });
 
         expect(logFailureSpy).toHaveBeenCalled();
@@ -553,7 +553,7 @@ describe('NLQ Tools Integration', () => {
   describe('optimize_sql', () => {
     describe('Without Execution Plan', () => {
       it('returns optimization suggestions', async () => {
-        const handler = registeredTools.get('optimize_sql')?.[2];
+        const handler = registeredTools.get('optimize_sql')?.handler;
         const result = await handler({
           sql: 'SELECT * FROM users WHERE name LIKE "%john%"',
         });
@@ -567,7 +567,7 @@ describe('NLQ Tools Integration', () => {
       });
 
       it('returns optimized SQL when available', async () => {
-        const handler = registeredTools.get('optimize_sql')?.[2];
+        const handler = registeredTools.get('optimize_sql')?.handler;
         const result = await handler({
           sql: 'SELECT * FROM users',
         });
@@ -577,7 +577,7 @@ describe('NLQ Tools Integration', () => {
       });
 
       it('calls LLM service without execution plan', async () => {
-        const handler = registeredTools.get('optimize_sql')?.[2];
+        const handler = registeredTools.get('optimize_sql')?.handler;
         await handler({
           sql: 'SELECT * FROM users',
         });
@@ -591,7 +591,7 @@ describe('NLQ Tools Integration', () => {
 
     describe('With Execution Plan', () => {
       it('fetches execution plan when database_id is provided', async () => {
-        const handler = registeredTools.get('optimize_sql')?.[2];
+        const handler = registeredTools.get('optimize_sql')?.handler;
         await handler({
           sql: 'SELECT * FROM users',
           database_id: 1,
@@ -601,7 +601,7 @@ describe('NLQ Tools Integration', () => {
       });
 
       it('passes execution plan to LLM service', async () => {
-        const handler = registeredTools.get('optimize_sql')?.[2];
+        const handler = registeredTools.get('optimize_sql')?.handler;
         await handler({
           sql: 'SELECT * FROM users',
           database_id: 1,
@@ -616,7 +616,7 @@ describe('NLQ Tools Integration', () => {
       it('continues without execution plan if EXPLAIN fails', async () => {
         mockClient.executeQuery.mockRejectedValueOnce(new Error('EXPLAIN not supported'));
 
-        const handler = registeredTools.get('optimize_sql')?.[2];
+        const handler = registeredTools.get('optimize_sql')?.handler;
         const result = await handler({
           sql: 'SELECT * FROM users',
           database_id: 1,
@@ -639,7 +639,7 @@ describe('NLQ Tools Integration', () => {
           optimizedSQL: 'SELECT id, name FROM users WHERE name ILIKE $1',
         });
 
-        const handler = registeredTools.get('optimize_sql')?.[2];
+        const handler = registeredTools.get('optimize_sql')?.handler;
         const result = await handler({
           sql: 'SELECT * FROM users WHERE LOWER(name) = LOWER("john")',
         });
@@ -654,7 +654,7 @@ describe('NLQ Tools Integration', () => {
           suggestions: ['The query is already optimal'],
         });
 
-        const handler = registeredTools.get('optimize_sql')?.[2];
+        const handler = registeredTools.get('optimize_sql')?.handler;
         const result = await handler({
           sql: 'SELECT id FROM users WHERE id = 1',
         });
@@ -669,7 +669,7 @@ describe('NLQ Tools Integration', () => {
       it('returns error when LLM service fails', async () => {
         mockLLMService.optimizeSQL.mockRejectedValueOnce(new Error('Optimization service error'));
 
-        const handler = registeredTools.get('optimize_sql')?.[2];
+        const handler = registeredTools.get('optimize_sql')?.handler;
         const result = await handler({
           sql: 'SELECT * FROM users',
         });
@@ -684,7 +684,7 @@ describe('NLQ Tools Integration', () => {
       it('logs successful optimization', async () => {
         const logSuccessSpy = vi.spyOn(context.auditLogger, 'logSuccess');
 
-        const handler = registeredTools.get('optimize_sql')?.[2];
+        const handler = registeredTools.get('optimize_sql')?.handler;
         await handler({
           sql: 'SELECT * FROM users LIMIT 100',
         });
@@ -703,7 +703,7 @@ describe('NLQ Tools Integration', () => {
   describe('validate_sql', () => {
     describe('Valid Queries', () => {
       it('validates a simple SELECT query', async () => {
-        const handler = registeredTools.get('validate_sql')?.[2];
+        const handler = registeredTools.get('validate_sql')?.handler;
         const result = await handler({
           sql: 'SELECT * FROM users LIMIT 10',
         });
@@ -715,7 +715,7 @@ describe('NLQ Tools Integration', () => {
       });
 
       it('validates a query with JOINs', async () => {
-        const handler = registeredTools.get('validate_sql')?.[2];
+        const handler = registeredTools.get('validate_sql')?.handler;
         const result = await handler({
           sql: 'SELECT u.name, o.total FROM users u JOIN orders o ON u.id = o.user_id LIMIT 100',
         });
@@ -725,7 +725,7 @@ describe('NLQ Tools Integration', () => {
       });
 
       it('validates a CTE (WITH) query', async () => {
-        const handler = registeredTools.get('validate_sql')?.[2];
+        const handler = registeredTools.get('validate_sql')?.handler;
         const result = await handler({
           sql: `WITH active_users AS (SELECT * FROM users WHERE active = true)
                 SELECT * FROM active_users LIMIT 50`,
@@ -736,7 +736,7 @@ describe('NLQ Tools Integration', () => {
       });
 
       it('validates a query with subquery', async () => {
-        const handler = registeredTools.get('validate_sql')?.[2];
+        const handler = registeredTools.get('validate_sql')?.handler;
         const result = await handler({
           sql: 'SELECT * FROM users WHERE id IN (SELECT user_id FROM orders) LIMIT 100',
         });
@@ -746,7 +746,7 @@ describe('NLQ Tools Integration', () => {
       });
 
       it('returns sanitized SQL', async () => {
-        const handler = registeredTools.get('validate_sql')?.[2];
+        const handler = registeredTools.get('validate_sql')?.handler;
         const result = await handler({
           sql: '  SELECT   *   FROM   users   LIMIT   10  ',
         });
@@ -760,7 +760,7 @@ describe('NLQ Tools Integration', () => {
 
     describe('Invalid/Dangerous Queries', () => {
       it('rejects DROP TABLE statements', async () => {
-        const handler = registeredTools.get('validate_sql')?.[2];
+        const handler = registeredTools.get('validate_sql')?.handler;
         const result = await handler({
           sql: 'DROP TABLE users',
         });
@@ -771,7 +771,7 @@ describe('NLQ Tools Integration', () => {
       });
 
       it('rejects DELETE statements', async () => {
-        const handler = registeredTools.get('validate_sql')?.[2];
+        const handler = registeredTools.get('validate_sql')?.handler;
         const result = await handler({
           sql: 'DELETE FROM users WHERE id = 1',
         });
@@ -782,7 +782,7 @@ describe('NLQ Tools Integration', () => {
       });
 
       it('rejects UPDATE statements', async () => {
-        const handler = registeredTools.get('validate_sql')?.[2];
+        const handler = registeredTools.get('validate_sql')?.handler;
         const result = await handler({
           sql: 'UPDATE users SET active = false',
         });
@@ -793,7 +793,7 @@ describe('NLQ Tools Integration', () => {
       });
 
       it('rejects INSERT statements', async () => {
-        const handler = registeredTools.get('validate_sql')?.[2];
+        const handler = registeredTools.get('validate_sql')?.handler;
         const result = await handler({
           sql: "INSERT INTO users (name) VALUES ('hacker')",
         });
@@ -804,7 +804,7 @@ describe('NLQ Tools Integration', () => {
       });
 
       it('rejects TRUNCATE statements', async () => {
-        const handler = registeredTools.get('validate_sql')?.[2];
+        const handler = registeredTools.get('validate_sql')?.handler;
         const result = await handler({
           sql: 'TRUNCATE TABLE users',
         });
@@ -814,7 +814,7 @@ describe('NLQ Tools Integration', () => {
       });
 
       it('rejects ALTER TABLE statements', async () => {
-        const handler = registeredTools.get('validate_sql')?.[2];
+        const handler = registeredTools.get('validate_sql')?.handler;
         const result = await handler({
           sql: 'ALTER TABLE users ADD COLUMN password TEXT',
         });
@@ -824,7 +824,7 @@ describe('NLQ Tools Integration', () => {
       });
 
       it('rejects UNION-based injection attempts', async () => {
-        const handler = registeredTools.get('validate_sql')?.[2];
+        const handler = registeredTools.get('validate_sql')?.handler;
         const result = await handler({
           sql: 'SELECT * FROM users UNION SELECT * FROM passwords',
         });
@@ -835,7 +835,7 @@ describe('NLQ Tools Integration', () => {
       });
 
       it('rejects queries with SQL comments', async () => {
-        const handler = registeredTools.get('validate_sql')?.[2];
+        const handler = registeredTools.get('validate_sql')?.handler;
         const result = await handler({
           sql: "SELECT * FROM users -- WHERE admin = true",
         });
@@ -845,7 +845,7 @@ describe('NLQ Tools Integration', () => {
       });
 
       it('rejects queries with block comments', async () => {
-        const handler = registeredTools.get('validate_sql')?.[2];
+        const handler = registeredTools.get('validate_sql')?.handler;
         const result = await handler({
           sql: 'SELECT * FROM users /* comment */ WHERE id = 1',
         });
@@ -855,7 +855,7 @@ describe('NLQ Tools Integration', () => {
       });
 
       it('rejects multiple statement injection', async () => {
-        const handler = registeredTools.get('validate_sql')?.[2];
+        const handler = registeredTools.get('validate_sql')?.handler;
         const result = await handler({
           sql: "SELECT * FROM users; DROP TABLE users;",
         });
@@ -865,7 +865,7 @@ describe('NLQ Tools Integration', () => {
       });
 
       it('rejects time-based blind injection (SLEEP)', async () => {
-        const handler = registeredTools.get('validate_sql')?.[2];
+        const handler = registeredTools.get('validate_sql')?.handler;
         const result = await handler({
           sql: 'SELECT * FROM users WHERE SLEEP(5)',
         });
@@ -875,7 +875,7 @@ describe('NLQ Tools Integration', () => {
       });
 
       it('rejects time-based blind injection (pg_sleep)', async () => {
-        const handler = registeredTools.get('validate_sql')?.[2];
+        const handler = registeredTools.get('validate_sql')?.handler;
         const result = await handler({
           sql: 'SELECT * FROM users WHERE pg_sleep(5)',
         });
@@ -885,7 +885,7 @@ describe('NLQ Tools Integration', () => {
       });
 
       it('rejects INFORMATION_SCHEMA access', async () => {
-        const handler = registeredTools.get('validate_sql')?.[2];
+        const handler = registeredTools.get('validate_sql')?.handler;
         const result = await handler({
           sql: 'SELECT * FROM INFORMATION_SCHEMA.TABLES',
         });
@@ -895,7 +895,7 @@ describe('NLQ Tools Integration', () => {
       });
 
       it('rejects file operations (INTO OUTFILE)', async () => {
-        const handler = registeredTools.get('validate_sql')?.[2];
+        const handler = registeredTools.get('validate_sql')?.handler;
         const result = await handler({
           sql: "SELECT * INTO OUTFILE '/tmp/data.txt' FROM users",
         });
@@ -905,7 +905,7 @@ describe('NLQ Tools Integration', () => {
       });
 
       it('rejects file read operations (LOAD_FILE)', async () => {
-        const handler = registeredTools.get('validate_sql')?.[2];
+        const handler = registeredTools.get('validate_sql')?.handler;
         const result = await handler({
           sql: "SELECT LOAD_FILE('/etc/passwd')",
         });
@@ -915,7 +915,7 @@ describe('NLQ Tools Integration', () => {
       });
 
       it('rejects command execution (xp_cmdshell)', async () => {
-        const handler = registeredTools.get('validate_sql')?.[2];
+        const handler = registeredTools.get('validate_sql')?.handler;
         const result = await handler({
           sql: "EXEC xp_cmdshell 'dir'",
         });
@@ -927,7 +927,7 @@ describe('NLQ Tools Integration', () => {
 
     describe('Warning Generation', () => {
       it('warns about missing LIMIT clause', async () => {
-        const handler = registeredTools.get('validate_sql')?.[2];
+        const handler = registeredTools.get('validate_sql')?.handler;
         const result = await handler({
           sql: 'SELECT * FROM users',
         });
@@ -937,7 +937,7 @@ describe('NLQ Tools Integration', () => {
       });
 
       it('warns about SELECT *', async () => {
-        const handler = registeredTools.get('validate_sql')?.[2];
+        const handler = registeredTools.get('validate_sql')?.handler;
         const result = await handler({
           sql: 'SELECT * FROM users LIMIT 10',
         });
@@ -947,7 +947,7 @@ describe('NLQ Tools Integration', () => {
       });
 
       it('warns about leading wildcards in LIKE', async () => {
-        const handler = registeredTools.get('validate_sql')?.[2];
+        const handler = registeredTools.get('validate_sql')?.handler;
         const result = await handler({
           sql: "SELECT * FROM users WHERE name LIKE '%john' LIMIT 10",
         });
@@ -957,7 +957,7 @@ describe('NLQ Tools Integration', () => {
       });
 
       it('warns about CROSS JOIN', async () => {
-        const handler = registeredTools.get('validate_sql')?.[2];
+        const handler = registeredTools.get('validate_sql')?.handler;
         const result = await handler({
           sql: 'SELECT * FROM users CROSS JOIN orders LIMIT 100',
         });
@@ -967,7 +967,7 @@ describe('NLQ Tools Integration', () => {
       });
 
       it('can return multiple warnings', async () => {
-        const handler = registeredTools.get('validate_sql')?.[2];
+        const handler = registeredTools.get('validate_sql')?.handler;
         const result = await handler({
           sql: 'SELECT * FROM users CROSS JOIN orders',
         });
@@ -979,7 +979,7 @@ describe('NLQ Tools Integration', () => {
 
     describe('Rate Limiting', () => {
       it('uses read tier rate limit (not nlq tier)', async () => {
-        const handler = registeredTools.get('validate_sql')?.[2];
+        const handler = registeredTools.get('validate_sql')?.handler;
 
         // Fill up read rate limit (120 per minute)
         for (let i = 0; i < 120; i++) {
@@ -998,7 +998,7 @@ describe('NLQ Tools Integration', () => {
       it('logs validation results', async () => {
         const logSuccessSpy = vi.spyOn(context.auditLogger, 'logSuccess');
 
-        const handler = registeredTools.get('validate_sql')?.[2];
+        const handler = registeredTools.get('validate_sql')?.handler;
         await handler({
           sql: 'SELECT * FROM users LIMIT 10',
         });
@@ -1013,7 +1013,7 @@ describe('NLQ Tools Integration', () => {
       it('logs validation of invalid SQL', async () => {
         const logSuccessSpy = vi.spyOn(context.auditLogger, 'logSuccess');
 
-        const handler = registeredTools.get('validate_sql')?.[2];
+        const handler = registeredTools.get('validate_sql')?.handler;
         await handler({
           sql: 'DROP TABLE users',
         });
@@ -1033,8 +1033,8 @@ describe('NLQ Tools Integration', () => {
 
   describe('Cross-Tool Integration', () => {
     it('nlq_to_sql result can be validated with validate_sql', async () => {
-      const nlqHandler = registeredTools.get('nlq_to_sql')?.[2];
-      const validateHandler = registeredTools.get('validate_sql')?.[2];
+      const nlqHandler = registeredTools.get('nlq_to_sql')?.handler;
+      const validateHandler = registeredTools.get('validate_sql')?.handler;
 
       const nlqResult = await nlqHandler({
         question: 'Get all users',
@@ -1053,8 +1053,8 @@ describe('NLQ Tools Integration', () => {
     });
 
     it('nlq_to_sql result can be explained with explain_sql', async () => {
-      const nlqHandler = registeredTools.get('nlq_to_sql')?.[2];
-      const explainHandler = registeredTools.get('explain_sql')?.[2];
+      const nlqHandler = registeredTools.get('nlq_to_sql')?.handler;
+      const explainHandler = registeredTools.get('explain_sql')?.handler;
 
       const nlqResult = await nlqHandler({
         question: 'Count orders by status',
@@ -1074,8 +1074,8 @@ describe('NLQ Tools Integration', () => {
     });
 
     it('nlq_to_sql result can be optimized with optimize_sql', async () => {
-      const nlqHandler = registeredTools.get('nlq_to_sql')?.[2];
-      const optimizeHandler = registeredTools.get('optimize_sql')?.[2];
+      const nlqHandler = registeredTools.get('nlq_to_sql')?.handler;
+      const optimizeHandler = registeredTools.get('optimize_sql')?.handler;
 
       const nlqResult = await nlqHandler({
         question: 'Get user order totals',
@@ -1102,7 +1102,7 @@ describe('NLQ Tools Integration', () => {
 
   describe('Edge Cases', () => {
     it('handles empty question for nlq_to_sql', async () => {
-      const handler = registeredTools.get('nlq_to_sql')?.[2];
+      const handler = registeredTools.get('nlq_to_sql')?.handler;
       const result = await handler({
         question: '',
         database_id: 1,
@@ -1115,7 +1115,7 @@ describe('NLQ Tools Integration', () => {
     it('handles very long SQL for validation', async () => {
       const longSQL = 'SELECT ' + Array(100).fill('column_name').join(', ') + ' FROM users LIMIT 10';
 
-      const handler = registeredTools.get('validate_sql')?.[2];
+      const handler = registeredTools.get('validate_sql')?.handler;
       const result = await handler({
         sql: longSQL,
       });
@@ -1126,7 +1126,7 @@ describe('NLQ Tools Integration', () => {
     });
 
     it('handles SQL with special characters', async () => {
-      const handler = registeredTools.get('validate_sql')?.[2];
+      const handler = registeredTools.get('validate_sql')?.handler;
       const result = await handler({
         sql: "SELECT * FROM users WHERE name = 'O''Brien' LIMIT 10",
       });
@@ -1137,7 +1137,7 @@ describe('NLQ Tools Integration', () => {
     });
 
     it('handles unicode in SQL', async () => {
-      const handler = registeredTools.get('validate_sql')?.[2];
+      const handler = registeredTools.get('validate_sql')?.handler;
       const result = await handler({
         sql: "SELECT * FROM users WHERE city = N'Tokyo' LIMIT 10",
       });

@@ -28,6 +28,7 @@ export function registerInsightTools(server: McpServer, ctx: ToolContext): void 
       database_id: z.number().describe('Database ID to query'),
       tables: z.array(z.string()).optional().describe('Specific tables to consider'),
     },
+    { title: 'Ask Data Question', readOnlyHint: true, openWorldHint: true },
     async ({ question, database_id, tables }) => {
       try {
         ctx.rateLimiter.checkLimit('nlq');
@@ -103,6 +104,7 @@ export function registerInsightTools(server: McpServer, ctx: ToolContext): void 
     {
       card_id: z.number().describe('Card ID to analyze'),
     },
+    { title: 'Generate Insights', readOnlyHint: true, openWorldHint: true },
     async ({ card_id }) => {
       try {
         ctx.rateLimiter.checkLimit('nlq');
@@ -157,6 +159,7 @@ export function registerInsightTools(server: McpServer, ctx: ToolContext): void 
       database_id: z.number().describe('Database ID'),
       tables: z.array(z.string()).optional().describe('Specific tables to use'),
     },
+    { title: 'Compare Metrics', readOnlyHint: true, openWorldHint: true },
     async ({ question, database_id, tables }) => {
       try {
         ctx.rateLimiter.checkLimit('nlq');
@@ -228,6 +231,7 @@ export function registerInsightTools(server: McpServer, ctx: ToolContext): void 
       database_id: z.number().describe('Database ID'),
       tables: z.array(z.string()).optional().describe('Specific tables to use'),
     },
+    { title: 'Trend Analysis', readOnlyHint: true, openWorldHint: true },
     async ({ question, database_id, tables }) => {
       try {
         ctx.rateLimiter.checkLimit('nlq');
