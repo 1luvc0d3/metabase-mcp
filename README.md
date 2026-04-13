@@ -5,6 +5,7 @@
 [![CI](https://github.com/1luvc0d3/metabase-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/1luvc0d3/metabase-mcp/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Node](https://img.shields.io/node/v/@ai-1luvc0d3/metabase-mcp.svg)](https://nodejs.org)
+[![metabase-mcp MCP server](https://glama.ai/mcp/servers/1luvc0d3/metabase-mcp/badges/card.svg)](https://glama.ai/mcp/servers/1luvc0d3/metabase-mcp)
 
 The most feature-rich [MCP](https://modelcontextprotocol.io/) server for [Metabase](https://www.metabase.com/). Ask questions about your data in plain English, manage dashboards, and run SQL queries -- all through Claude.
 
