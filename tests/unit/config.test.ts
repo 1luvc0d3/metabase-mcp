@@ -38,6 +38,11 @@ describe('loadConfig()', () => {
     delete process.env.RATE_LIMIT_REQUESTS_PER_MINUTE;
     delete process.env.LOG_LEVEL;
     delete process.env.AUDIT_LOG_FILE;
+    delete process.env.MCP_TRANSPORT;
+    delete process.env.MCP_HTTP_PORT;
+    delete process.env.MCP_HTTP_HOST;
+    delete process.env.MCP_CORS_ORIGIN;
+    delete process.env.MCP_AUTH_TOKEN;
   });
 
   afterEach(() => {
@@ -361,6 +366,55 @@ describe('loadConfig()', () => {
     });
   });
 
+  describe('transport configuration', () => {
+    it('defaults transport to stdio', () => {
+      process.env.METABASE_URL = 'https://metabase.example.com';
+      const config = loadConfig();
+      expect(config.transport).toBe('stdio');
+    });
+
+    it('accepts http transport', () => {
+      process.env.METABASE_URL = 'https://metabase.example.com';
+      process.env.MCP_TRANSPORT = 'http';
+      const config = loadConfig();
+      expect(config.transport).toBe('http');
+    });
+
+    it('defaults HTTP port to 3000', () => {
+      process.env.METABASE_URL = 'https://metabase.example.com';
+      const config = loadConfig();
+      expect(config.http.port).toBe(3000);
+    });
+
+    it('defaults HTTP host to 127.0.0.1', () => {
+      process.env.METABASE_URL = 'https://metabase.example.com';
+      const config = loadConfig();
+      expect(config.http.host).toBe('127.0.0.1');
+    });
+
+    it('loads custom HTTP config from env', () => {
+      process.env.METABASE_URL = 'https://metabase.example.com';
+      process.env.MCP_TRANSPORT = 'http';
+      process.env.MCP_HTTP_PORT = '8080';
+      process.env.MCP_HTTP_HOST = '0.0.0.0';
+      process.env.MCP_CORS_ORIGIN = 'https://app.example.com';
+      process.env.MCP_AUTH_TOKEN = 'secret-token-123';
+
+      const config = loadConfig();
+      expect(config.transport).toBe('http');
+      expect(config.http.port).toBe(8080);
+      expect(config.http.host).toBe('0.0.0.0');
+      expect(config.http.corsOrigin).toBe('https://app.example.com');
+      expect(config.http.authToken).toBe('secret-token-123');
+    });
+
+    it('throws for invalid transport value', () => {
+      process.env.METABASE_URL = 'https://metabase.example.com';
+      process.env.MCP_TRANSPORT = 'websocket';
+      expect(() => loadConfig()).toThrow(ConfigurationError);
+    });
+  });
+
   describe('edge cases', () => {
     it('handles URL with trailing slash', () => {
       process.env.METABASE_URL = 'https://metabase.example.com/';
@@ -456,6 +510,11 @@ describe('validateConfig()', () => {
     },
     logging: {
       level: 'info' as const,
+    },
+    transport: 'stdio' as const,
+    http: {
+      port: 3000,
+      host: '127.0.0.1',
     },
     ...overrides,
   });

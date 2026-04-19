@@ -6,7 +6,8 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import type { ToolContext } from './types.js';
-import { createTextResponse, createErrorResponse } from './types.js';
+import { createTextResponse, createErrorResponse, createCompactTextResponse } from './types.js';
+import { formatQueryResult, formatSchemaResult } from '../utils/response-formatter.js';
 import { SQLValidationError } from '../utils/errors.js';
 
 export function registerReadTools(server: McpServer, ctx: ToolContext): void {
@@ -143,9 +144,13 @@ export function registerReadTools(server: McpServer, ctx: ToolContext): void {
     {
       card_id: z.number().describe('Card ID to execute'),
       parameters: z.record(z.unknown()).optional().describe('Optional parameters for parameterized queries'),
+      fields: z.array(z.string()).optional().describe('Column names to include in results (default: all)'),
+      format: z.enum(['default', 'compact']).optional().describe('Response format. "compact" reduces token usage by ~50%'),
+      limit: z.number().min(1).max(10000).optional().describe('Max rows to return (default: server maxRows setting)'),
+      offset: z.number().min(0).optional().describe('Row offset for pagination'),
     },
     { title: 'Execute Card', readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-    async ({ card_id, parameters }) => {
+    async ({ card_id, parameters, fields, format, limit, offset }) => {
       try {
         ctx.rateLimiter.checkLimit('read');
         const startTime = Date.now();
@@ -158,13 +163,26 @@ export function registerReadTools(server: McpServer, ctx: ToolContext): void {
           durationMs: duration,
         });
 
-        return createTextResponse({
-          columns: result.data.cols.map(c => ({ name: c.name, type: c.base_type })),
-          rows: result.data.rows.slice(0, ctx.config.metabase.maxRows),
-          row_count: result.row_count,
-          truncated: result.row_count > ctx.config.metabase.maxRows,
+        const formatted = formatQueryResult(
+          result.data.cols,
+          result.data.rows,
+          result.row_count,
+          {
+            fields,
+            format,
+            limit: limit ?? ctx.config.metabase.maxRows,
+            offset: offset ?? 0,
+          }
+        );
+
+        const response = {
+          ...formatted,
           execution_time_ms: duration,
-        });
+        };
+
+        return format === 'compact'
+          ? createCompactTextResponse(response)
+          : createTextResponse(response);
       } catch (error) {
         ctx.auditLogger.logFailure('execute_card', error as Error, { card_id });
         return createErrorResponse(error as Error);
@@ -211,9 +229,12 @@ export function registerReadTools(server: McpServer, ctx: ToolContext): void {
     'Get tables and columns for a database',
     {
       database_id: z.number().describe('Database ID'),
+      detail: z.enum(['full', 'tables_only']).optional().describe('Level of detail. "tables_only" returns table names without columns'),
+      format: z.enum(['default', 'compact']).optional().describe('Response format. "compact" reduces token usage'),
+      tables: z.array(z.string()).optional().describe('Filter to specific table names'),
     },
     { title: 'Get Database Schema', readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-    async ({ database_id }) => {
+    async ({ database_id, detail, format, tables }) => {
       try {
         ctx.rateLimiter.checkLimit('read');
         const schema = await ctx.schemaManager.getSchema(database_id);
@@ -222,7 +243,10 @@ export function registerReadTools(server: McpServer, ctx: ToolContext): void {
           tableCount: schema.tables.length,
         });
 
-        return createTextResponse(schema);
+        const formatted = formatSchemaResult(schema, { detail, format, tables });
+        return format === 'compact'
+          ? createCompactTextResponse(formatted)
+          : createTextResponse(formatted);
       } catch (error) {
         ctx.auditLogger.logFailure('get_database_schema', error as Error, { database_id });
         return createErrorResponse(error as Error);
@@ -239,9 +263,13 @@ export function registerReadTools(server: McpServer, ctx: ToolContext): void {
     {
       database_id: z.number().describe('Database ID to query'),
       sql: z.string().describe('SQL query (SELECT statements only)'),
+      fields: z.array(z.string()).optional().describe('Column names to include in results (default: all)'),
+      format: z.enum(['default', 'compact']).optional().describe('Response format. "compact" reduces token usage by ~50%'),
+      limit: z.number().min(1).max(10000).optional().describe('Max rows to return (default: server maxRows setting)'),
+      offset: z.number().min(0).optional().describe('Row offset for pagination'),
     },
     { title: 'Execute SQL Query', readOnlyHint: true, openWorldHint: true },
-    async ({ database_id, sql }) => {
+    async ({ database_id, sql, fields, format, limit, offset }) => {
       try {
         ctx.rateLimiter.checkLimit('read');
 
@@ -267,15 +295,27 @@ export function registerReadTools(server: McpServer, ctx: ToolContext): void {
         ctx.auditLogger.logQuery(database_id, validation.sanitizedSQL, result.row_count, duration);
 
         // Format response
-        const rows = result.data.rows.slice(0, ctx.config.metabase.maxRows);
-        return createTextResponse({
-          columns: result.data.cols.map(c => ({ name: c.name, type: c.base_type })),
-          rows,
-          row_count: result.row_count,
-          truncated: result.row_count > ctx.config.metabase.maxRows,
+        const formatted = formatQueryResult(
+          result.data.cols,
+          result.data.rows,
+          result.row_count,
+          {
+            fields,
+            format,
+            limit: limit ?? ctx.config.metabase.maxRows,
+            offset: offset ?? 0,
+          }
+        );
+
+        const response = {
+          ...formatted,
           execution_time_ms: duration,
           warnings: validation.warnings,
-        });
+        };
+
+        return format === 'compact'
+          ? createCompactTextResponse(response)
+          : createTextResponse(response);
       } catch (error) {
         if (error instanceof SQLValidationError) {
           return createErrorResponse(error);

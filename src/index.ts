@@ -5,7 +5,6 @@
  */
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { loadConfig, Logger } from './config.js';
 import { MetabaseClient } from './client/metabase-client.js';
 import { LLMService } from './client/llm-service.js';
@@ -14,6 +13,8 @@ import { TieredRateLimiter } from './security/rate-limiter.js';
 import { AuditLogger } from './security/audit-logger.js';
 import { SchemaManager } from './utils/schema-manager.js';
 import { registerTools } from './tools/index.js';
+import { startStdioTransport } from './transport/stdio-transport.js';
+import { startHttpTransport } from './transport/http-transport.js';
 import type { ToolContext } from './tools/types.js';
 
 async function main() {
@@ -67,9 +68,12 @@ async function main() {
   // Register tools based on mode
   await registerTools(server, toolContext);
 
-  // Connect via stdio transport
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
+  // Start transport
+  if (config.transport === 'http') {
+    await startHttpTransport(config, toolContext, logger);
+  } else {
+    await startStdioTransport(server, logger);
+  }
 
   logger.info('MCP Server connected and ready');
 }

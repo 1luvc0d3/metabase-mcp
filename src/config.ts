@@ -62,6 +62,13 @@ const AppConfigSchema = z.object({
   llm: LLMConfigSchema,
   security: SecurityConfigSchema,
   logging: LoggingConfigSchema,
+  transport: z.enum(['stdio', 'http']).default('stdio'),
+  http: z.object({
+    port: z.number().min(1).max(65535).default(3000),
+    host: z.string().default('127.0.0.1'),
+    corsOrigin: z.string().optional(),
+    authToken: z.string().optional(),
+  }).default({}),
 });
 
 // ============================================================================
@@ -101,6 +108,13 @@ export function loadConfig(): AppConfig {
       logging: {
         level: process.env.LOG_LEVEL as 'debug' | 'info' | 'warn' | 'error',
         auditFile: process.env.AUDIT_LOG_FILE,
+      },
+      transport: process.env.MCP_TRANSPORT as 'stdio' | 'http',
+      http: {
+        port: parseIntOrDefault(process.env.MCP_HTTP_PORT, 3000),
+        host: process.env.MCP_HTTP_HOST || '127.0.0.1',
+        corsOrigin: process.env.MCP_CORS_ORIGIN || undefined,
+        authToken: process.env.MCP_AUTH_TOKEN || undefined,
       },
     };
 
