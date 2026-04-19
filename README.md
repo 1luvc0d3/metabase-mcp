@@ -7,22 +7,28 @@
 [![Node](https://img.shields.io/node/v/@ai-1luvc0d3/metabase-mcp.svg)](https://nodejs.org)
 [![Glama score](https://glama.ai/mcp/servers/1luvc0d3/metabase-mcp/badges/score.svg)](https://glama.ai/mcp/servers/1luvc0d3/metabase-mcp)
 
-The most feature-rich [MCP](https://modelcontextprotocol.io/) server for [Metabase](https://www.metabase.com/). Ask questions about your data in plain English, manage dashboards, and run SQL queries -- all through Claude.
+The **write-enabled, AI-augmented** [MCP](https://modelcontextprotocol.io/) server for [Metabase](https://www.metabase.com/) — create dashboards, ask questions in plain English, and get automated insights through Claude, on any Metabase version.
 
 ## Why This One?
 
-There are other Metabase MCP servers. Here's why this one is different:
+Metabase shipped an [official MCP server in v0.60](https://www.metabase.com/docs/latest/ai/mcp) focused on read and search. This server complements it with **write operations, AI-generated insights, production security controls, and support for Metabase versions older than v0.60**.
 
-| Feature | @ai-1luvc0d3/metabase-mcp | Others |
-|---------|:--:|:--:|
-| Purpose-built tools | **28** | 4-19 |
-| Natural language to SQL | **Yes** | No |
-| AI-powered insights & trend analysis | **Yes** | No |
-| SQL injection protection | **Yes** | No |
-| Rate limiting | **Tiered** | No |
-| Audit logging with risk levels | **Yes** | No |
-| Server modes (read/write/full) | **Yes** | No |
-| Schema caching for fast NLQ | **Yes** | No |
+| Capability | @ai-1luvc0d3/metabase-mcp | Metabase Official (v0.60+) | Other community servers |
+|---|:--:|:--:|:--:|
+| Read dashboards / cards / databases | ✅ | ✅ | ✅ |
+| Write ops (create/update/delete cards, dashboards, collections) | ✅ | ❌ | partial |
+| Natural language → SQL (+ explain / optimize / validate) | ✅ | partial | ❌ |
+| Automated insights & trend analysis | ✅ | ❌ | ❌ |
+| SQL injection guardrails | ✅ | n/a | ❌ |
+| Tiered rate limiting (read / write / LLM) | ✅ | n/a | ❌ |
+| Audit logging with risk levels | ✅ | n/a | ❌ |
+| Server modes (read / write / full) | ✅ | ❌ | ❌ |
+| Works on Metabase &lt; v0.60 (no upgrade required) | ✅ | ❌ | varies |
+| OAuth per-user permission scoping | ❌ (API key) | ✅ | varies |
+
+**Use this if:** you want Claude to *create* content in Metabase, you want AI-generated insights on query results, or you're on a Metabase version older than v0.60.
+
+**Use Metabase's official MCP if:** you're on v0.60+, only need read/search, and want per-user permission scoping via OAuth.
 
 ## Features
 
@@ -233,9 +239,20 @@ When using NLQ or insight tools (`ask_data`, `generate_insights`, etc.), **query
 - Check logs: `~/Library/Logs/Claude/mcp*.log` on macOS
 - Verify `node --version` is >= 18
 
+## Feedback Wanted
+
+This project is young and your input shapes where it goes next — especially now that Metabase has shipped its own official MCP. A minute of your time helps a lot:
+
+- **Is this useful for your workflow?** Start a [GitHub Discussion](https://github.com/1luvc0d3/metabase-mcp/discussions) or [star the repo](https://github.com/1luvc0d3/metabase-mcp) — tells me where to invest.
+- **Which tools do you actually use?** Let me know in [Discussions](https://github.com/1luvc0d3/metabase-mcp/discussions) — helps prioritize what stays, what grows.
+- **Hit a bug?** [File an issue](https://github.com/1luvc0d3/metabase-mcp/issues/new) with your Metabase version, `MCP_MODE`, and reproduction steps.
+- **Missing a feature?** [Request it](https://github.com/1luvc0d3/metabase-mcp/issues/new) — especially something the [official Metabase MCP](https://www.metabase.com/docs/latest/ai/mcp) doesn't cover.
+- **Running in production?** I'd genuinely love to hear about it — open a Discussion or drop a note on the repo.
+
 ## Support
 
 - **Bug reports / feature requests:** [GitHub Issues](https://github.com/1luvc0d3/metabase-mcp/issues)
+- **Questions / general feedback:** [GitHub Discussions](https://github.com/1luvc0d3/metabase-mcp/discussions)
 - **Security vulnerabilities:** [Private disclosure](https://github.com/1luvc0d3/metabase-mcp/security/advisories/new) — see [SECURITY.md](SECURITY.md)
 - **Response time:** typically within 5 business days
 
