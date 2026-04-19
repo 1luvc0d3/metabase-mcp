@@ -168,7 +168,7 @@ describe('Read Tools Integration', () => {
 
       const data = JSON.parse(result.content[0].text);
       expect(data.rows.length).toBeLessThanOrEqual(context.config.metabase.maxRows);
-      expect(data.truncated).toBe(true);
+      expect(data.has_more).toBe(true);
     });
   });
 

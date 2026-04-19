@@ -6,7 +6,7 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import type { ToolContext } from './types.js';
-import { createTextResponse, createErrorResponse } from './types.js';
+import { createTextResponse, createErrorResponse, createCompactTextResponse } from './types.js';
 
 export function registerInsightTools(server: McpServer, ctx: ToolContext): void {
   // Ensure LLM service is available
@@ -27,9 +27,10 @@ export function registerInsightTools(server: McpServer, ctx: ToolContext): void 
       question: z.string().describe('Natural language question about your data'),
       database_id: z.number().describe('Database ID to query'),
       tables: z.array(z.string()).optional().describe('Specific tables to consider'),
+      format: z.enum(['default', 'compact']).optional().describe('Response format. "compact" reduces token usage'),
     },
     { title: 'Ask Data Question', readOnlyHint: true, openWorldHint: true },
-    async ({ question, database_id, tables }) => {
+    async ({ question, database_id, tables, format }) => {
       try {
         ctx.rateLimiter.checkLimit('nlq');
 
@@ -75,7 +76,8 @@ export function registerInsightTools(server: McpServer, ctx: ToolContext): void 
           queryDurationMs: queryDuration,
         });
 
-        return createTextResponse({
+        const sampleSize = format === 'compact' ? 5 : 10;
+        const responseData = {
           success: true,
           answer: insights.summary,
           insights: insights.points,
@@ -83,11 +85,15 @@ export function registerInsightTools(server: McpServer, ctx: ToolContext): void 
           data: {
             columns: queryResult.data.cols.map(c => c.name),
             row_count: queryResult.row_count,
-            sample: queryResult.data.rows.slice(0, 10),
+            sample: queryResult.data.rows.slice(0, sampleSize),
           },
           sql: validation.sanitizedSQL,
           query_time_ms: queryDuration,
-        });
+        };
+
+        return format === 'compact'
+          ? createCompactTextResponse(responseData)
+          : createTextResponse(responseData);
       } catch (error) {
         ctx.auditLogger.logFailure('ask_data', error as Error, { question, database_id });
         return createErrorResponse(error as Error);
@@ -103,9 +109,10 @@ export function registerInsightTools(server: McpServer, ctx: ToolContext): void 
     'Auto-generate insights from an existing card/question',
     {
       card_id: z.number().describe('Card ID to analyze'),
+      format: z.enum(['default', 'compact']).optional().describe('Response format. "compact" reduces token usage'),
     },
     { title: 'Generate Insights', readOnlyHint: true, openWorldHint: true },
-    async ({ card_id }) => {
+    async ({ card_id, format }) => {
       try {
         ctx.rateLimiter.checkLimit('nlq');
 
@@ -129,7 +136,7 @@ export function registerInsightTools(server: McpServer, ctx: ToolContext): void 
           rowCount: result.row_count,
         });
 
-        return createTextResponse({
+        const responseData = {
           success: true,
           card_name: card.name,
           summary: insights.summary,
@@ -140,7 +147,11 @@ export function registerInsightTools(server: McpServer, ctx: ToolContext): void 
             row_count: result.row_count,
           },
           query_time_ms: queryDuration,
-        });
+        };
+
+        return format === 'compact'
+          ? createCompactTextResponse(responseData)
+          : createTextResponse(responseData);
       } catch (error) {
         ctx.auditLogger.logFailure('generate_insights', error as Error, { card_id });
         return createErrorResponse(error as Error);
@@ -158,9 +169,10 @@ export function registerInsightTools(server: McpServer, ctx: ToolContext): void 
       question: z.string().describe('Comparison question (e.g., "Compare sales in Q1 vs Q2")'),
       database_id: z.number().describe('Database ID'),
       tables: z.array(z.string()).optional().describe('Specific tables to use'),
+      format: z.enum(['default', 'compact']).optional().describe('Response format. "compact" reduces token usage'),
     },
     { title: 'Compare Metrics', readOnlyHint: true, openWorldHint: true },
-    async ({ question, database_id, tables }) => {
+    async ({ question, database_id, tables, format }) => {
       try {
         ctx.rateLimiter.checkLimit('nlq');
 
@@ -201,7 +213,7 @@ export function registerInsightTools(server: McpServer, ctx: ToolContext): void 
           rowCount: queryResult.row_count,
         });
 
-        return createTextResponse({
+        const responseData = {
           success: true,
           comparison_summary: insights.summary,
           key_differences: insights.points,
@@ -212,7 +224,11 @@ export function registerInsightTools(server: McpServer, ctx: ToolContext): void 
             row_count: queryResult.row_count,
           },
           sql: validation.sanitizedSQL,
-        });
+        };
+
+        return format === 'compact'
+          ? createCompactTextResponse(responseData)
+          : createTextResponse(responseData);
       } catch (error) {
         ctx.auditLogger.logFailure('compare_metrics', error as Error, { question, database_id });
         return createErrorResponse(error as Error);
@@ -230,9 +246,10 @@ export function registerInsightTools(server: McpServer, ctx: ToolContext): void 
       question: z.string().describe('Question about trends (e.g., "What are the sales trends over the past year?")'),
       database_id: z.number().describe('Database ID'),
       tables: z.array(z.string()).optional().describe('Specific tables to use'),
+      format: z.enum(['default', 'compact']).optional().describe('Response format. "compact" reduces token usage'),
     },
     { title: 'Trend Analysis', readOnlyHint: true, openWorldHint: true },
-    async ({ question, database_id, tables }) => {
+    async ({ question, database_id, tables, format }) => {
       try {
         ctx.rateLimiter.checkLimit('nlq');
 
@@ -274,7 +291,7 @@ export function registerInsightTools(server: McpServer, ctx: ToolContext): void 
           rowCount: queryResult.row_count,
         });
 
-        return createTextResponse({
+        const responseData = {
           success: true,
           trend_summary: insights.summary,
           patterns_identified: insights.points,
@@ -285,7 +302,11 @@ export function registerInsightTools(server: McpServer, ctx: ToolContext): void 
             row_count: queryResult.row_count,
           },
           sql: validation.sanitizedSQL,
-        });
+        };
+
+        return format === 'compact'
+          ? createCompactTextResponse(responseData)
+          : createTextResponse(responseData);
       } catch (error) {
         ctx.auditLogger.logFailure('trend_analysis', error as Error, { question, database_id });
         return createErrorResponse(error as Error);

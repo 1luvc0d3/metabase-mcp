@@ -57,6 +57,15 @@ export function createTextResponse(data: unknown): ToolResponse {
   };
 }
 
+export function createCompactTextResponse(data: unknown): ToolResponse {
+  return {
+    content: [{
+      type: 'text' as const,
+      text: typeof data === 'string' ? data : JSON.stringify(data),
+    }],
+  };
+}
+
 export function createErrorResponse(error: Error | string): ToolResponse {
   const message = error instanceof Error ? error.message : error;
   return {

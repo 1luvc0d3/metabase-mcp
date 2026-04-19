@@ -258,6 +258,13 @@ export interface LLMConfig {
   timeoutMs: number;
 }
 
+export interface HttpTransportConfig {
+  port: number;
+  host: string;
+  corsOrigin?: string;
+  authToken?: string;
+}
+
 export interface AppConfig {
   mode: ServerMode;
   metabase: MetabaseConfig;
@@ -268,4 +275,6 @@ export interface AppConfig {
     level: 'debug' | 'info' | 'warn' | 'error';
     auditFile?: string;
   };
+  transport: 'stdio' | 'http';
+  http: HttpTransportConfig;
 }
