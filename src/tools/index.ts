@@ -9,6 +9,8 @@ import { registerReadTools } from './read-tools.js';
 import { registerWriteTools } from './write-tools.js';
 import { registerNLQTools } from './nlq-tools.js';
 import { registerInsightTools } from './insight-tools.js';
+import { registerBatchTools } from './batch-tools.js';
+import { registerWorkflowTools } from './workflow-tools.js';
 
 export async function registerTools(
   server: McpServer,
@@ -16,9 +18,12 @@ export async function registerTools(
 ): Promise<void> {
   const { config, logger } = context;
 
-  // Always register read tools
+  // Always register read tools, batch tools, and workflow tools
   registerReadTools(server, context);
+  registerBatchTools(server, context);
+  registerWorkflowTools(server, context);
   logger.info('Registered read-only tools');
+  logger.info('Registered batch and workflow tools');
 
   // Register write tools if mode allows
   if (config.mode === 'write' || config.mode === 'full') {
@@ -41,6 +46,8 @@ export async function registerTools(
   // Log summary
   const toolCounts = {
     read: 10,
+    batch: 1,
+    workflow: 1,
     write: config.mode === 'write' || config.mode === 'full' ? 10 : 0,
     nlq: context.llmService ? 4 : 0,
     insight: config.mode === 'full' && context.llmService ? 4 : 0,

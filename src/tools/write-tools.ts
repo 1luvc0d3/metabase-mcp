@@ -6,7 +6,7 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import type { ToolContext } from './types.js';
-import { createTextResponse, createErrorResponse } from './types.js';
+import { createErrorResponse, createCompactTextResponse } from './types.js';
 import { SQLValidationError } from '../utils/errors.js';
 
 export function registerWriteTools(server: McpServer, ctx: ToolContext): void {
@@ -52,7 +52,7 @@ export function registerWriteTools(server: McpServer, ctx: ToolContext): void {
 
         ctx.auditLogger.logSuccess('create_card', { card_id: card.id, name });
 
-        return createTextResponse({
+        return createCompactTextResponse({
           success: true,
           card: {
             id: card.id,
@@ -114,7 +114,7 @@ export function registerWriteTools(server: McpServer, ctx: ToolContext): void {
         const card = await ctx.metabaseClient.updateCard(card_id, updates);
         ctx.auditLogger.logSuccess('update_card', { card_id, updates: Object.keys(updates) });
 
-        return createTextResponse({
+        return createCompactTextResponse({
           success: true,
           card: {
             id: card.id,
@@ -146,7 +146,7 @@ export function registerWriteTools(server: McpServer, ctx: ToolContext): void {
         await ctx.metabaseClient.deleteCard(card_id);
         ctx.auditLogger.logSuccess('delete_card', { card_id });
 
-        return createTextResponse({
+        return createCompactTextResponse({
           success: true,
           message: `Card ${card_id} has been archived`,
         });
@@ -181,7 +181,7 @@ export function registerWriteTools(server: McpServer, ctx: ToolContext): void {
 
         ctx.auditLogger.logSuccess('create_dashboard', { dashboard_id: dashboard.id, name });
 
-        return createTextResponse({
+        return createCompactTextResponse({
           success: true,
           dashboard: {
             id: dashboard.id,
@@ -222,7 +222,7 @@ export function registerWriteTools(server: McpServer, ctx: ToolContext): void {
         const dashboard = await ctx.metabaseClient.updateDashboard(dashboard_id, updates);
         ctx.auditLogger.logSuccess('update_dashboard', { dashboard_id, updates: Object.keys(updates) });
 
-        return createTextResponse({
+        return createCompactTextResponse({
           success: true,
           dashboard: {
             id: dashboard.id,
@@ -253,7 +253,7 @@ export function registerWriteTools(server: McpServer, ctx: ToolContext): void {
         await ctx.metabaseClient.deleteDashboard(dashboard_id);
         ctx.auditLogger.logSuccess('delete_dashboard', { dashboard_id });
 
-        return createTextResponse({
+        return createCompactTextResponse({
           success: true,
           message: `Dashboard ${dashboard_id} has been archived`,
         });
@@ -292,7 +292,7 @@ export function registerWriteTools(server: McpServer, ctx: ToolContext): void {
 
         ctx.auditLogger.logSuccess('add_card_to_dashboard', { dashboard_id, card_id });
 
-        return createTextResponse({
+        return createCompactTextResponse({
           success: true,
           message: `Card ${card_id} added to dashboard ${dashboard_id}`,
         });
@@ -320,7 +320,7 @@ export function registerWriteTools(server: McpServer, ctx: ToolContext): void {
         await ctx.metabaseClient.removeCardFromDashboard(dashboard_id, dashcard_id);
         ctx.auditLogger.logSuccess('remove_card_from_dashboard', { dashboard_id, dashcard_id });
 
-        return createTextResponse({
+        return createCompactTextResponse({
           success: true,
           message: `Card removed from dashboard ${dashboard_id}`,
         });
@@ -357,7 +357,7 @@ export function registerWriteTools(server: McpServer, ctx: ToolContext): void {
 
         ctx.auditLogger.logSuccess('create_collection', { collection_id: collection.id, name });
 
-        return createTextResponse({
+        return createCompactTextResponse({
           success: true,
           collection: {
             id: collection.id,
@@ -397,7 +397,7 @@ export function registerWriteTools(server: McpServer, ctx: ToolContext): void {
 
         ctx.auditLogger.logSuccess('move_to_collection', { item_type, item_id, collection_id });
 
-        return createTextResponse({
+        return createCompactTextResponse({
           success: true,
           message: `${item_type} ${item_id} moved to collection ${collection_id}`,
         });
