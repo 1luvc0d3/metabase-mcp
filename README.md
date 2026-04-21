@@ -17,11 +17,14 @@ Metabase shipped an [official MCP server in v0.60](https://www.metabase.com/docs
 |---|:--:|:--:|:--:|
 | Read dashboards / cards / databases | ✅ | ✅ | ✅ |
 | Write ops (create/update/delete cards, dashboards, collections) | ✅ | ❌ | partial |
+| Batch execution (parallel multi-op in one call) | ✅ | ❌ | ❌ |
+| Workflow pipelines (chained steps with output references) | ✅ | ❌ | ❌ |
 | Natural language → SQL (+ explain / optimize / validate) | ✅ | partial | ❌ |
 | Automated insights & trend analysis | ✅ | ❌ | ❌ |
 | SQL injection guardrails | ✅ | n/a | ❌ |
 | Tiered rate limiting (read / write / LLM) | ✅ | n/a | ❌ |
 | Audit logging with risk levels | ✅ | n/a | ❌ |
+| Token-optimized compact responses (default) | ✅ | ❌ | partial |
 | Server modes (read / write / full) | ✅ | ❌ | ❌ |
 | Works on Metabase &lt; v0.60 (no upgrade required) | ✅ | ❌ | varies |
 | OAuth per-user permission scoping | ❌ (API key) | ✅ | varies |
@@ -32,7 +35,10 @@ Metabase shipped an [official MCP server in v0.60](https://www.metabase.com/docs
 
 ## Features
 
-- **28 tools** across read, write, NLQ, and insight categories
+- **30 tools** across read, batch, workflow, write, NLQ, and insight categories
+- **Batch execution** -- run up to 20 read operations in parallel in a single call
+- **Workflow pipelines** -- chain tools sequentially with `$stepName.path` output references between steps
+- **Compact responses by default** -- all tools return compact JSON (~50% token reduction); opt into pretty-printing with `format: "default"`
 - **Natural language to SQL** -- ask questions, get SQL + results (powered by Claude)
 - **SQL guardrails** -- injection detection, DDL/DML blocking, dangerous pattern enforcement
 - **Tiered rate limiting** -- configurable per-minute limits for read, write, and LLM operations
@@ -117,14 +123,17 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
 
 | Mode | Tools | Description |
 |------|-------|-------------|
-| `read` | 10 + NLQ | Read-only access to dashboards, cards, databases, queries |
-| `write` | 20 + NLQ | Adds create/update/delete for cards, dashboards, collections |
-| `full` | 28 | All tools including automated insights and trend analysis |
+| `read` | 12 + NLQ | Read-only access, batch execution, and workflow pipelines |
+| `write` | 22 + NLQ | Adds create/update/delete for cards, dashboards, collections |
+| `full` | 30 | All tools including automated insights and trend analysis |
 
 ### Available Tools
 
 **Read (always available)**
 `list_dashboards`, `get_dashboard`, `list_cards`, `get_card`, `execute_card`, `list_databases`, `get_database_schema`, `execute_query`, `search_content`, `get_collections`
+
+**Batch & Workflow (always available)**
+`batch_execute`, `run_workflow`
 
 **Write (write/full modes)**
 `create_card`, `update_card`, `delete_card`, `create_dashboard`, `update_dashboard`, `delete_dashboard`, `add_card_to_dashboard`, `remove_card_from_dashboard`, `create_collection`, `move_to_collection`
@@ -169,7 +178,44 @@ Claude uses `nlq_to_sql` with the database schema as context to generate a compa
 
 Claude calls `get_collections` to find "Growth", then `create_card` with your validated SQL. The card now lives in your Metabase library and can be re-executed by name in future conversations via `execute_card` — no LLM tokens spent on re-generating the query.
 
-### 5. Automated insights on query results (full mode)
+### 5. Batch execution — parallel data gathering
+
+> **You**: Get me the details for dashboards 1, 3, and 7, plus the schema for the sales database
+
+Claude uses `batch_execute` to run all four operations in parallel in a single call:
+
+```json
+{
+  "operations": [
+    { "tool": "get_dashboard", "args": { "dashboard_id": 1 } },
+    { "tool": "get_dashboard", "args": { "dashboard_id": 3 } },
+    { "tool": "get_dashboard", "args": { "dashboard_id": 7 } },
+    { "tool": "get_database_schema", "args": { "database_id": 2 } }
+  ]
+}
+```
+
+One tool call instead of four. Results come back with per-operation success/failure, so partial failures don't block the rest.
+
+### 6. Workflow pipelines — chained multi-step operations
+
+> **You**: Find dashboards about revenue, get the first one's cards, and run the top card
+
+Claude uses `run_workflow` to chain the steps with output references:
+
+```json
+{
+  "steps": [
+    { "name": "find", "tool": "search_content", "args": { "query": "revenue", "type": "dashboard" } },
+    { "name": "dash", "tool": "get_dashboard", "args": { "dashboard_id": "$find.results[0].id" } },
+    { "name": "data", "tool": "execute_card", "args": { "card_id": "$dash.dashcards[0].card_id" } }
+  ]
+}
+```
+
+Each step can reference results from previous steps using `$stepName.path[index].field` syntax. One round trip instead of three back-and-forth exchanges.
+
+### 7. Automated insights on query results (full mode)
 
 > **You**: Run last quarter's revenue query and tell me what's interesting
 
