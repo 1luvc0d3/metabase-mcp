@@ -6,7 +6,7 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import type { ToolContext } from './types.js';
-import { createTextResponse, createErrorResponse } from './types.js';
+import { createTextResponse, createErrorResponse, createCompactTextResponse } from './types.js';
 
 export function registerNLQTools(server: McpServer, ctx: ToolContext): void {
   // Ensure LLM service is available
@@ -81,7 +81,7 @@ export function registerNLQTools(server: McpServer, ctx: ToolContext): void {
           tablesUsed: schema.tables.length,
         });
 
-        return createTextResponse({
+        return createCompactTextResponse({
           success: true,
           sql: validation.sanitizedSQL,
           explanation: result.explanation,
@@ -111,7 +111,7 @@ export function registerNLQTools(server: McpServer, ctx: ToolContext): void {
         const explanation = await llmService.explainSQL(sql);
         ctx.auditLogger.logSuccess('explain_sql', { sqlLength: sql.length });
 
-        return createTextResponse({
+        return createCompactTextResponse({
           sql,
           explanation,
         });
@@ -156,7 +156,7 @@ export function registerNLQTools(server: McpServer, ctx: ToolContext): void {
         const optimization = await llmService.optimizeSQL(sql, executionPlan);
         ctx.auditLogger.logSuccess('optimize_sql', { sqlLength: sql.length });
 
-        return createTextResponse({
+        return createCompactTextResponse({
           original_sql: sql,
           suggestions: optimization.suggestions,
           optimized_sql: optimization.optimizedSQL,
@@ -189,7 +189,7 @@ export function registerNLQTools(server: McpServer, ctx: ToolContext): void {
           warningCount: validation.warnings.length,
         });
 
-        return createTextResponse({
+        return createCompactTextResponse({
           valid: validation.valid,
           errors: validation.errors,
           warnings: validation.warnings,

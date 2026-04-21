@@ -66,11 +66,13 @@ API key authentication via `METABASE_API_KEY`. The key is passed as `X-API-Key` 
 - **src/client/types.ts** - Metabase API types and config interfaces
 - **src/client/llm-service.ts** - Anthropic Claude API integration with token budgeting (daily/monthly limits)
 
-### Tool Categories (28 total tools)
+### Tool Categories (30 total tools)
 
 | Category | File | Tools | Description |
 |----------|------|-------|-------------|
 | Read-Only | `src/tools/read-tools.ts` | 10 | Dashboard, card, database, collection queries |
+| Batch | `src/tools/batch-tools.ts` | 1 | Parallel execution of multiple read operations |
+| Workflow | `src/tools/workflow-tools.ts` | 1 | Composable multi-step pipelines with output chaining |
 | DML/Write | `src/tools/write-tools.ts` | 10 | Create/update/delete cards, dashboards, collections |
 | NLQ | `src/tools/nlq-tools.ts` | 4 | Natural language to SQL conversion |
 | Insights | `src/tools/insight-tools.ts` | 4 | Automated data analysis and trends |
@@ -101,9 +103,9 @@ API key authentication via `METABASE_API_KEY`. The key is passed as `X-API-Key` 
 
 The `MCP_MODE` environment variable controls which tools are available:
 
-- **read** - 10 read-only tools + NLQ (if Anthropic key set)
-- **write** - 20 tools (read + DML) + NLQ
-- **full** - All 28 tools including insights
+- **read** - 12 tools (10 read-only + batch + workflow) + NLQ (if Anthropic key set)
+- **write** - 22 tools (read + batch + workflow + DML) + NLQ
+- **full** - All 30 tools including insights
 
 ## Test Structure
 
@@ -122,6 +124,8 @@ tests/
 └── integration/
     ├── read-tools.test.ts
     ├── write-tools.test.ts
+    ├── batch-tools.test.ts
+    ├── workflow-tools.test.ts
     └── nlq-tools.test.ts
 ```
 

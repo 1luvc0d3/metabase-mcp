@@ -25,7 +25,7 @@ export function registerReadTools(server: McpServer, ctx: ToolContext): void {
         const dashboards = await ctx.metabaseClient.getDashboards();
         ctx.auditLogger.logSuccess('list_dashboards', { count: dashboards.length });
 
-        return createTextResponse({
+        return createCompactTextResponse({
           count: dashboards.length,
           dashboards: dashboards.map(d => ({
             id: d.id,
@@ -58,7 +58,7 @@ export function registerReadTools(server: McpServer, ctx: ToolContext): void {
         const dashboard = await ctx.metabaseClient.getDashboard(dashboard_id);
         ctx.auditLogger.logSuccess('get_dashboard', { dashboard_id });
 
-        return createTextResponse(dashboard);
+        return createCompactTextResponse(dashboard);
       } catch (error) {
         ctx.auditLogger.logFailure('get_dashboard', error as Error, { dashboard_id });
         return createErrorResponse(error as Error);
@@ -91,7 +91,7 @@ export function registerReadTools(server: McpServer, ctx: ToolContext): void {
         cards = cards.slice(0, maxCards);
         ctx.auditLogger.logSuccess('list_cards', { count: cards.length });
 
-        return createTextResponse({
+        return createCompactTextResponse({
           count: cards.length,
           ...(truncated ? { truncated: true, message: `Showing first ${maxCards} of many cards. Use search_content or filter by collection_id for better results.` } : {}),
           cards: cards.map(c => ({
@@ -127,7 +127,7 @@ export function registerReadTools(server: McpServer, ctx: ToolContext): void {
         const card = await ctx.metabaseClient.getCard(card_id);
         ctx.auditLogger.logSuccess('get_card', { card_id });
 
-        return createTextResponse(card);
+        return createCompactTextResponse(card);
       } catch (error) {
         ctx.auditLogger.logFailure('get_card', error as Error, { card_id });
         return createErrorResponse(error as Error);
@@ -145,7 +145,7 @@ export function registerReadTools(server: McpServer, ctx: ToolContext): void {
       card_id: z.number().describe('Card ID to execute'),
       parameters: z.record(z.unknown()).optional().describe('Optional parameters for parameterized queries'),
       fields: z.array(z.string()).optional().describe('Column names to include in results (default: all)'),
-      format: z.enum(['default', 'compact']).optional().describe('Response format. "compact" reduces token usage by ~50%'),
+      format: z.enum(['default', 'compact']).optional().describe('Response format (default: compact). Use "default" for pretty-printed output'),
       limit: z.number().min(1).max(10000).optional().describe('Max rows to return (default: server maxRows setting)'),
       offset: z.number().min(0).optional().describe('Row offset for pagination'),
     },
@@ -169,7 +169,7 @@ export function registerReadTools(server: McpServer, ctx: ToolContext): void {
           result.row_count,
           {
             fields,
-            format,
+            format: format ?? 'compact',
             limit: limit ?? ctx.config.metabase.maxRows,
             offset: offset ?? 0,
           }
@@ -180,9 +180,9 @@ export function registerReadTools(server: McpServer, ctx: ToolContext): void {
           execution_time_ms: duration,
         };
 
-        return format === 'compact'
-          ? createCompactTextResponse(response)
-          : createTextResponse(response);
+        return format === 'default'
+          ? createTextResponse(response)
+          : createCompactTextResponse(response);
       } catch (error) {
         ctx.auditLogger.logFailure('execute_card', error as Error, { card_id });
         return createErrorResponse(error as Error);
@@ -204,7 +204,7 @@ export function registerReadTools(server: McpServer, ctx: ToolContext): void {
         const databases = await ctx.metabaseClient.getDatabases();
         ctx.auditLogger.logSuccess('list_databases', { count: databases.length });
 
-        return createTextResponse({
+        return createCompactTextResponse({
           count: databases.length,
           databases: databases.map(d => ({
             id: d.id,
@@ -230,7 +230,7 @@ export function registerReadTools(server: McpServer, ctx: ToolContext): void {
     {
       database_id: z.number().describe('Database ID'),
       detail: z.enum(['full', 'tables_only']).optional().describe('Level of detail. "tables_only" returns table names without columns'),
-      format: z.enum(['default', 'compact']).optional().describe('Response format. "compact" reduces token usage'),
+      format: z.enum(['default', 'compact']).optional().describe('Response format (default: compact). Use "default" for pretty-printed output'),
       tables: z.array(z.string()).optional().describe('Filter to specific table names'),
     },
     { title: 'Get Database Schema', readOnlyHint: true, idempotentHint: true, openWorldHint: true },
@@ -243,10 +243,10 @@ export function registerReadTools(server: McpServer, ctx: ToolContext): void {
           tableCount: schema.tables.length,
         });
 
-        const formatted = formatSchemaResult(schema, { detail, format, tables });
-        return format === 'compact'
-          ? createCompactTextResponse(formatted)
-          : createTextResponse(formatted);
+        const formatted = formatSchemaResult(schema, { detail, format: format ?? 'compact', tables });
+        return format === 'default'
+          ? createTextResponse(formatted)
+          : createCompactTextResponse(formatted);
       } catch (error) {
         ctx.auditLogger.logFailure('get_database_schema', error as Error, { database_id });
         return createErrorResponse(error as Error);
@@ -264,7 +264,7 @@ export function registerReadTools(server: McpServer, ctx: ToolContext): void {
       database_id: z.number().describe('Database ID to query'),
       sql: z.string().describe('SQL query (SELECT statements only)'),
       fields: z.array(z.string()).optional().describe('Column names to include in results (default: all)'),
-      format: z.enum(['default', 'compact']).optional().describe('Response format. "compact" reduces token usage by ~50%'),
+      format: z.enum(['default', 'compact']).optional().describe('Response format (default: compact). Use "default" for pretty-printed output'),
       limit: z.number().min(1).max(10000).optional().describe('Max rows to return (default: server maxRows setting)'),
       offset: z.number().min(0).optional().describe('Row offset for pagination'),
     },
@@ -301,7 +301,7 @@ export function registerReadTools(server: McpServer, ctx: ToolContext): void {
           result.row_count,
           {
             fields,
-            format,
+            format: format ?? 'compact',
             limit: limit ?? ctx.config.metabase.maxRows,
             offset: offset ?? 0,
           }
@@ -313,9 +313,9 @@ export function registerReadTools(server: McpServer, ctx: ToolContext): void {
           warnings: validation.warnings,
         };
 
-        return format === 'compact'
-          ? createCompactTextResponse(response)
-          : createTextResponse(response);
+        return format === 'default'
+          ? createTextResponse(response)
+          : createCompactTextResponse(response);
       } catch (error) {
         if (error instanceof SQLValidationError) {
           return createErrorResponse(error);
@@ -348,7 +348,7 @@ export function registerReadTools(server: McpServer, ctx: ToolContext): void {
           resultCount: results.length,
         });
 
-        return createTextResponse({
+        return createCompactTextResponse({
           count: results.length,
           results: results.map(r => ({
             id: r.id,
@@ -380,7 +380,7 @@ export function registerReadTools(server: McpServer, ctx: ToolContext): void {
         const collections = await ctx.metabaseClient.getCollections();
         ctx.auditLogger.logSuccess('get_collections', { count: collections.length });
 
-        return createTextResponse({
+        return createCompactTextResponse({
           count: collections.length,
           collections: collections.map(c => ({
             id: c.id,
