@@ -310,26 +310,61 @@ export class MetabaseClient {
     cardId: number,
     options?: { row?: number; col?: number; size_x?: number; size_y?: number }
   ): Promise<void> {
-    await this.request(`/dashboard/${dashboardId}/cards`, {
-      method: 'POST',
-      body: JSON.stringify({
-        cardId,
-        row: options?.row ?? 0,
-        col: options?.col ?? 0,
-        size_x: options?.size_x ?? 4,
-        size_y: options?.size_y ?? 4,
-      }),
-    });
+    const placement = {
+      row: options?.row ?? 0,
+      col: options?.col ?? 0,
+      size_x: options?.size_x ?? 4,
+      size_y: options?.size_y ?? 4,
+    };
+
+    try {
+      // Metabase < v0.50 endpoint. Tried first because it fails loudly (404)
+      // on modern versions, whereas the modern PUT silently ignores the
+      // dashcards key on old versions.
+      await this.request(`/dashboard/${dashboardId}/cards`, {
+        method: 'POST',
+        body: JSON.stringify({ cardId, ...placement }),
+      });
+    } catch (error) {
+      if (!(error instanceof MetabaseError && (error.statusCode === 404 || error.statusCode === 405))) {
+        throw error;
+      }
+      // Metabase >= v0.50: dashcards are edited via PUT /dashboard/:id with
+      // the full dashcard set; id -1 marks a new card.
+      const dashboard = await this.request<{ dashcards?: unknown[] }>(`/dashboard/${dashboardId}`);
+      const dashcards = [
+        ...(dashboard.dashcards ?? []),
+        { id: -1, card_id: cardId, ...placement },
+      ];
+      await this.request(`/dashboard/${dashboardId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ dashcards }),
+      });
+    }
   }
 
   /**
    * Remove a card from a dashboard
    */
   async removeCardFromDashboard(dashboardId: number, dashcardId: number): Promise<void> {
-    await this.request(`/dashboard/${dashboardId}/cards`, {
-      method: 'DELETE',
-      body: JSON.stringify({ dashcardId }),
-    });
+    try {
+      // Metabase < v0.50 endpoint; fails loudly (404) on modern versions.
+      await this.request(`/dashboard/${dashboardId}/cards`, {
+        method: 'DELETE',
+        body: JSON.stringify({ dashcardId }),
+      });
+    } catch (error) {
+      if (!(error instanceof MetabaseError && (error.statusCode === 404 || error.statusCode === 405))) {
+        throw error;
+      }
+      // Metabase >= v0.50: PUT the dashcard set back without the removed card.
+      const dashboard = await this.request<{ dashcards?: Array<{ id: number }> }>(`/dashboard/${dashboardId}`);
+      const dashcards = (dashboard.dashcards ?? []).filter(dc => dc.id !== dashcardId);
+      await this.request(`/dashboard/${dashboardId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ dashcards }),
+      });
+    }
   }
 
   // ============================================================================
