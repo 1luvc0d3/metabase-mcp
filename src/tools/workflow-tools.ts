@@ -79,6 +79,9 @@ async function executeStep(
   ctx: ToolContext,
   workflowContext: Record<string, unknown>,
 ): Promise<unknown> {
+  if (ctx.toolGate && !ctx.toolGate(step.tool)) {
+    throw new Error(`Tool '${step.tool}' is disabled by server policy`);
+  }
   const args = step.args ? resolveValue(step.args, workflowContext) as Record<string, unknown> : {};
 
   switch (step.tool) {

@@ -74,6 +74,9 @@ async function executeOperation(
   op: Operation,
   ctx: ToolContext,
 ): Promise<{ tool: string; success: boolean; result?: unknown; error?: string }> {
+  if (ctx.toolGate && !ctx.toolGate(op.tool)) {
+    return { tool: op.tool, success: false, error: `Tool '${op.tool}' is disabled by server policy` };
+  }
   try {
     switch (op.tool) {
       case 'get_dashboard': {

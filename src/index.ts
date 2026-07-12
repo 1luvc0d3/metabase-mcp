@@ -10,6 +10,7 @@ import { MetabaseClient } from './client/metabase-client.js';
 import { LLMService } from './client/llm-service.js';
 import { SQLGuardrails } from './security/sql-guardrails.js';
 import { TieredRateLimiter } from './security/rate-limiter.js';
+import { createToolGate } from './security/tool-gate.js';
 import { AuditLogger } from './security/audit-logger.js';
 import { SchemaManager } from './utils/schema-manager.js';
 import { registerTools } from './tools/index.js';
@@ -37,7 +38,11 @@ async function main() {
   // Initialize core services
   const metabaseClient = new MetabaseClient(config.metabase);
   const sqlGuardrails = new SQLGuardrails(config.security);
-  const rateLimiter = new TieredRateLimiter();
+  const rateLimiter = new TieredRateLimiter({
+    read: { requestsPerMinute: config.security.rateLimit.readPerMinute },
+    write: { requestsPerMinute: config.security.rateLimit.writePerMinute },
+    nlq: { requestsPerMinute: config.security.rateLimit.llmPerMinute },
+  });
   const auditLogger = new AuditLogger({ logFile: config.logging.auditFile });
   const schemaManager = new SchemaManager(metabaseClient);
 
@@ -48,6 +53,17 @@ async function main() {
     logger.info('LLM service initialized - NLQ features enabled');
   } else {
     logger.warn('ANTHROPIC_API_KEY not set - NLQ features disabled');
+  }
+
+  // Per-tool allow/deny gate, applied at registration and inside batch/workflow
+  const toolGate = (config.tools.allow?.length || config.tools.deny?.length)
+    ? createToolGate(config.tools.allow, config.tools.deny)
+    : undefined;
+  if (toolGate) {
+    logger.info('Tool access policy active', {
+      allow: config.tools.allow,
+      deny: config.tools.deny,
+    });
   }
 
   // Create tool context — expose only safe config subset (no API keys)
@@ -63,6 +79,7 @@ async function main() {
     auditLogger,
     schemaManager,
     logger,
+    toolGate,
   };
 
   // Register tools based on mode

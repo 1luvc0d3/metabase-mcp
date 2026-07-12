@@ -37,8 +37,16 @@ const SecurityConfigSchema = z.object({
   ]),
   rateLimit: z.object({
     requestsPerMinute: z.number().min(1).max(1000).default(60),
+    readPerMinute: z.number().min(1).max(1000).default(120),
+    writePerMinute: z.number().min(1).max(1000).default(30),
+    llmPerMinute: z.number().min(1).max(1000).default(20),
   }).default({}),
 });
+
+const ToolAccessSchema = z.object({
+  allow: z.array(z.string()).optional(),
+  deny: z.array(z.string()).optional(),
+}).default({});
 
 const LLMConfigSchema = z.object({
   model: z.string().default('claude-sonnet-4-20250514'),
@@ -61,6 +69,7 @@ const AppConfigSchema = z.object({
   anthropicApiKey: z.string().optional(),
   llm: LLMConfigSchema,
   security: SecurityConfigSchema,
+  tools: ToolAccessSchema,
   logging: LoggingConfigSchema,
   transport: z.enum(['stdio', 'http']).default('stdio'),
   http: z.object({
@@ -103,7 +112,19 @@ export function loadConfig(): AppConfig {
         blockedPatterns: parseArrayOrDefault(process.env.BLOCKED_SQL_PATTERNS, undefined),
         rateLimit: {
           requestsPerMinute: parseIntOrDefault(process.env.RATE_LIMIT_REQUESTS_PER_MINUTE, 60),
+          // Legacy RATE_LIMIT_REQUESTS_PER_MINUTE applies to the read tier
+          // when no tier-specific value is set
+          readPerMinute: parseIntOrDefault(
+            process.env.RATE_LIMIT_READ_PER_MINUTE ?? process.env.RATE_LIMIT_REQUESTS_PER_MINUTE,
+            120
+          ),
+          writePerMinute: parseIntOrDefault(process.env.RATE_LIMIT_WRITE_PER_MINUTE, 30),
+          llmPerMinute: parseIntOrDefault(process.env.RATE_LIMIT_LLM_PER_MINUTE, 20),
         },
+      },
+      tools: {
+        allow: parseArrayOrDefault(process.env.MCP_TOOLS_ALLOW, undefined),
+        deny: parseArrayOrDefault(process.env.MCP_TOOLS_DENY, undefined),
       },
       logging: {
         level: process.env.LOG_LEVEL as 'debug' | 'info' | 'warn' | 'error',

@@ -198,6 +198,27 @@ describe('Workflow Tools Integration', () => {
       expect(data.steps[0].error).toContain('SQL validation failed');
     });
 
+    it('rejects steps disabled by the tool gate', async () => {
+      context.toolGate = (name: string) => name !== 'execute_query';
+
+      const handler = registeredTools.get('run_workflow')?.handler;
+      const result = await handler({
+        steps: [
+          {
+            name: 'query',
+            tool: 'execute_query',
+            args: { database_id: 1, sql: 'SELECT 1' },
+          },
+        ],
+      });
+
+      const data = JSON.parse(result.content[0].text);
+      expect(data.completed).toBe(false);
+      expect(data.steps[0].success).toBe(false);
+      expect(data.steps[0].error).toContain('disabled by server policy');
+      expect(mockClient.executeQuery).not.toHaveBeenCalled();
+    });
+
     it('executes a multi-step data exploration workflow', async () => {
       mockClient.search.mockResolvedValue([
         { id: 1, name: 'Revenue', model: 'card', collection_id: 1, collection_name: 'Analytics', description: null },
