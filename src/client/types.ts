@@ -245,7 +245,15 @@ export interface SecurityConfig {
   blockedPatterns: string[];
   rateLimit: {
     requestsPerMinute: number;
+    readPerMinute: number;
+    writePerMinute: number;
+    llmPerMinute: number;
   };
+}
+
+export interface ToolAccessConfig {
+  allow?: string[];
+  deny?: string[];
 }
 
 export interface LLMConfig {
@@ -271,6 +279,7 @@ export interface AppConfig {
   anthropicApiKey?: string;
   llm: LLMConfig;
   security: SecurityConfig;
+  tools: ToolAccessConfig;
   logging: {
     level: 'debug' | 'info' | 'warn' | 'error';
     auditFile?: string;

@@ -198,6 +198,76 @@ describe('Workflow Tools Integration', () => {
       expect(data.steps[0].error).toContain('SQL validation failed');
     });
 
+    it('chains write steps with output references', async () => {
+      mockClient.createCard.mockResolvedValue({ id: 42, name: 'MAU Card', display: 'line', collection_id: 1 });
+      mockClient.createDashboard.mockResolvedValue({ id: 7, name: 'Growth', collection_id: 1 });
+
+      const handler = registeredTools.get('run_workflow')?.handler;
+      const result = await handler({
+        steps: [
+          { name: 'card', tool: 'create_card', args: { name: 'MAU Card', database_id: 1, sql: 'SELECT 1' } },
+          { name: 'dash', tool: 'create_dashboard', args: { name: 'Growth' } },
+          { name: 'link', tool: 'add_card_to_dashboard', args: { dashboard_id: '$dash.id', card_id: '$card.id' } },
+        ],
+      });
+
+      const data = JSON.parse(result.content[0].text);
+      expect(data.completed).toBe(true);
+      expect(data.succeeded).toBe(3);
+      expect(mockClient.addCardToDashboard).toHaveBeenCalledWith(7, 42, expect.any(Object));
+    });
+
+    it('rejects write steps in read mode', async () => {
+      (context.config as any).mode = 'read';
+
+      const handler = registeredTools.get('run_workflow')?.handler;
+      const result = await handler({
+        steps: [
+          { name: 'dash', tool: 'create_dashboard', args: { name: 'Growth' } },
+        ],
+      });
+
+      const data = JSON.parse(result.content[0].text);
+      expect(data.completed).toBe(false);
+      expect(data.steps[0].error).toContain('requires write or full mode');
+      expect(mockClient.createDashboard).not.toHaveBeenCalled();
+    });
+
+    it('validates SQL in create_card steps', async () => {
+      const handler = registeredTools.get('run_workflow')?.handler;
+      const result = await handler({
+        steps: [
+          { name: 'card', tool: 'create_card', args: { name: 'Bad', database_id: 1, sql: 'DROP TABLE users' } },
+        ],
+      });
+
+      const data = JSON.parse(result.content[0].text);
+      expect(data.completed).toBe(false);
+      expect(data.steps[0].error).toContain('SQL validation failed');
+      expect(mockClient.createCard).not.toHaveBeenCalled();
+    });
+
+    it('rejects steps disabled by the tool gate', async () => {
+      context.toolGate = (name: string) => name !== 'execute_query';
+
+      const handler = registeredTools.get('run_workflow')?.handler;
+      const result = await handler({
+        steps: [
+          {
+            name: 'query',
+            tool: 'execute_query',
+            args: { database_id: 1, sql: 'SELECT 1' },
+          },
+        ],
+      });
+
+      const data = JSON.parse(result.content[0].text);
+      expect(data.completed).toBe(false);
+      expect(data.steps[0].success).toBe(false);
+      expect(data.steps[0].error).toContain('disabled by server policy');
+      expect(mockClient.executeQuery).not.toHaveBeenCalled();
+    });
+
     it('executes a multi-step data exploration workflow', async () => {
       mockClient.search.mockResolvedValue([
         { id: 1, name: 'Revenue', model: 'card', collection_id: 1, collection_name: 'Analytics', description: null },

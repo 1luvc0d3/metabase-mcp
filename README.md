@@ -7,37 +7,51 @@
 [![Node](https://img.shields.io/node/v/@ai-1luvc0d3/metabase-mcp.svg)](https://nodejs.org)
 [![Glama score](https://glama.ai/mcp/servers/1luvc0d3/metabase-mcp/badges/score.svg)](https://glama.ai/mcp/servers/1luvc0d3/metabase-mcp)
 
-The **write-enabled, AI-augmented** [MCP](https://modelcontextprotocol.io/) server for [Metabase](https://www.metabase.com/) — create dashboards, ask questions in plain English, and get automated insights through Claude, on any Metabase version.
+The **headless, AI-augmented** [MCP](https://modelcontextprotocol.io/) server for [Metabase](https://www.metabase.com/) — API-key auth that works for agents, CI, and VPN'd self-hosted instances, with AI insights, production security controls, and support for any Metabase version.
 
 ## Why This One?
 
-Metabase shipped an [official MCP server in v0.60](https://www.metabase.com/docs/latest/ai/mcp) focused on read and search. This server complements it with **write operations, AI-generated insights, production security controls, and support for Metabase versions older than v0.60**.
+Metabase ships an [official MCP server](https://www.metabase.com/docs/latest/ai/mcp) (v0.60+), and as of v0.61/v0.62 it covers both read and write operations — creating and updating questions, dashboards, and collections, plus raw SQL execution. It's good, and if it fits your setup you should consider it.
 
-| Capability | @ai-1luvc0d3/metabase-mcp | Metabase Official (v0.60+) | Other community servers |
-|---|:--:|:--:|:--:|
-| Read dashboards / cards / databases | ✅ | ✅ | ✅ |
-| Write ops (create/update/delete cards, dashboards, collections) | ✅ | ❌ | partial |
-| Batch execution (parallel multi-op in one call) | ✅ | ❌ | ❌ |
-| Workflow pipelines (chained steps with output references) | ✅ | ❌ | ❌ |
-| Natural language → SQL (+ explain / optimize / validate) | ✅ | partial | ❌ |
-| Automated insights & trend analysis | ✅ | ❌ | ❌ |
-| SQL injection guardrails | ✅ | n/a | ❌ |
-| Tiered rate limiting (read / write / LLM) | ✅ | n/a | ❌ |
-| Audit logging with risk levels | ✅ | n/a | ❌ |
-| Token-optimized compact responses (default) | ✅ | ❌ | partial |
-| Server modes (read / write / full) | ✅ | ❌ | ❌ |
-| Works on Metabase &lt; v0.60 (no upgrade required) | ✅ | ❌ | varies |
-| OAuth per-user permission scoping | ❌ (API key) | ✅ | varies |
+This server exists for the setups it doesn't fit:
 
-**Use this if:** you want Claude to *create* content in Metabase, you want AI-generated insights on query results, or you're on a Metabase version older than v0.60.
+- **Headless / agent use.** The official MCP is OAuth-only, which requires a browser flow and a publicly reachable HTTPS instance. This server authenticates with a Metabase API key — it works in CI, in autonomous agents, and on self-hosted instances behind a VPN.
+- **AI inside the server.** NLQ-to-SQL, SQL explain/optimize/validate, automated insights, and trend analysis run in the server with your own Anthropic key — independent of which AI client connects.
+- **Operational control.** The official MCP is an instance-wide on/off switch. This server has read/write/full modes, SQL injection guardrails, tiered rate limits, and risk-scored audit logging.
+- **Composition.** `batch_execute` (up to 20 parallel ops) and `run_workflow` (chained steps with output references) have no official equivalent.
+- **Any Metabase version** — including pre-v0.60 instances that can't use the official MCP at all.
 
-**Use Metabase's official MCP if:** you're on v0.60+, only need read/search, and want per-user permission scoping via OAuth.
+| Capability | @ai-1luvc0d3/metabase-mcp | Metabase Official (v0.62) |
+|---|:--:|:--:|
+| Read dashboards / cards / databases | ✅ | ✅ |
+| Create & update questions, dashboards, collections | ✅ | ✅ (v0.61+/v0.62+) |
+| Raw SQL execution | ✅ SELECT-only + guardrails | ✅ (v0.62+, needs native-query permission) |
+| Delete / archive cards & dashboards | ✅ | ❌ |
+| Add / remove cards on a dashboard | ✅ | ❌ |
+| Batch execution (parallel multi-op in one call) | ✅ | ❌ |
+| Workflow pipelines (chained steps with output references) | ✅ | ❌ |
+| NLQ → SQL + explain / optimize / validate (LLM in the server) | ✅ | ❌ (relies on the AI client) |
+| Automated insights & trend analysis | ✅ | ❌ |
+| Inline interactive charts rendered in the AI client | ❌ | ✅ (v0.62+) |
+| SQL injection guardrails | ✅ | permission-based |
+| Tiered rate limiting (read / write / LLM) | ✅ | ❌ |
+| Audit logging with risk levels | ✅ | ❌ |
+| Server modes / tool-level gating | ✅ | ❌ (instance-wide on/off) |
+| API-key auth (headless, CI, agents, VPN'd self-hosted) | ✅ | ❌ (OAuth browser flow only) |
+| OAuth per-user permission scoping | ❌ (API key) | ✅ |
+| Works on Metabase &lt; v0.60 (no upgrade required) | ✅ | ❌ |
+
+**Use this if:** you're running agents or CI that can't do an OAuth browser flow, your self-hosted Metabase isn't publicly reachable, you want AI-generated insights server-side, you need audit logs and rate limits, or you're on a Metabase version older than v0.60.
+
+**Use Metabase's official MCP if:** you're on v0.62+, your instance is reachable for OAuth, and per-user permission scoping or inline interactive charts matter more to you than the above.
+
+Other community Metabase MCP servers exist too — some with broader raw API coverage. This one prioritizes safety rails and token efficiency over exposing every endpoint.
 
 ## Features
 
 - **30 tools** across read, batch, workflow, write, NLQ, and insight categories
-- **Batch execution** -- run up to 20 read operations in parallel in a single call
-- **Workflow pipelines** -- chain tools sequentially with `$stepName.path` output references between steps
+- **Batch execution** -- run up to 20 operations in parallel in a single call (reads always; non-destructive writes in write/full mode)
+- **Workflow pipelines** -- chain tools sequentially with `$stepName.path` output references between steps, including write steps (e.g. create a card, then add it to a dashboard, in one call)
 - **Compact responses by default** -- all tools return compact JSON (~50% token reduction); opt into pretty-printing with `format: "default"`
 - **Natural language to SQL** -- ask questions, get SQL + results (powered by Claude)
 - **SQL guardrails** -- injection detection, DDL/DML blocking, dangerous pattern enforcement
@@ -90,7 +104,22 @@ Set environment variables or create a `.env` file (see `.env.example`):
 | `METABASE_TIMEOUT` | No | `30000` | Request timeout (ms) |
 | `METABASE_MAX_ROWS` | No | `10000` | Max rows returned per query |
 | `LOG_LEVEL` | No | `info` | Logging: `debug`, `info`, `warn`, `error` |
-| `RATE_LIMIT_REQUESTS_PER_MINUTE` | No | `60` | Rate limit threshold |
+| `MCP_TOOLS_ALLOW` | No | - | Comma-separated allowlist — only these tools are exposed |
+| `MCP_TOOLS_DENY` | No | - | Comma-separated denylist — these tools are never exposed (wins over allow) |
+| `RATE_LIMIT_READ_PER_MINUTE` | No | `120` | Read-tier rate limit |
+| `RATE_LIMIT_WRITE_PER_MINUTE` | No | `30` | Write-tier rate limit |
+| `RATE_LIMIT_LLM_PER_MINUTE` | No | `20` | LLM-tier rate limit |
+| `RATE_LIMIT_REQUESTS_PER_MINUTE` | No | - | Legacy: sets the read tier when `RATE_LIMIT_READ_PER_MINUTE` is unset |
+
+### Per-tool access control
+
+Server modes give coarse control (read / write / full); `MCP_TOOLS_ALLOW` and `MCP_TOOLS_DENY` refine it per tool. Denied tools are not registered with the MCP client at all, and the same policy is enforced on operations nested inside `batch_execute` and `run_workflow` — a denied tool can't be reached through a batch or pipeline. Deny always wins over allow.
+
+```bash
+# Expose read tools but never raw SQL
+MCP_MODE=read
+MCP_TOOLS_DENY=execute_query
+```
 
 ### Generate a Metabase API Key
 
@@ -134,6 +163,8 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
 
 **Batch & Workflow (always available)**
 `batch_execute`, `run_workflow`
+
+In `write`/`full` mode, both also accept the non-destructive write tools (`create_card`, `update_card`, `create_dashboard`, `update_dashboard`, `add_card_to_dashboard`, `create_collection`, `move_to_collection`). Delete/remove operations are never batchable — they must be explicit single tool calls.
 
 **Write (write/full modes)**
 `create_card`, `update_card`, `delete_card`, `create_dashboard`, `update_dashboard`, `delete_dashboard`, `add_card_to_dashboard`, `remove_card_from_dashboard`, `create_collection`, `move_to_collection`
@@ -215,6 +246,22 @@ Claude uses `run_workflow` to chain the steps with output references:
 
 Each step can reference results from previous steps using `$stepName.path[index].field` syntax. One round trip instead of three back-and-forth exchanges.
 
+In `write`/`full` mode, pipelines can also build content:
+
+> **You**: Save this query as a card and put it on a new "Growth" dashboard
+
+```json
+{
+  "steps": [
+    { "name": "card", "tool": "create_card", "args": { "name": "MAU Trend", "database_id": 2, "sql": "SELECT ..." } },
+    { "name": "dash", "tool": "create_dashboard", "args": { "name": "Growth" } },
+    { "name": "link", "tool": "add_card_to_dashboard", "args": { "dashboard_id": "$dash.id", "card_id": "$card.id" } }
+  ]
+}
+```
+
+Write steps go through the same guardrails as the standalone write tools: write-tier rate limiting, SQL validation, and per-operation audit logging. Destructive operations (deletes/removes) are not allowed in pipelines.
+
 ### 7. Automated insights on query results (full mode)
 
 > **You**: Run last quarter's revenue query and tell me what's interesting
@@ -228,7 +275,8 @@ Claude uses `execute_query` to run the query, then `generate_insights` which ask
 This server is designed for production use with multiple layers of protection:
 
 - **SQL Guardrails**: Only `SELECT` and `WITH` queries are allowed by default. DDL/DML statements (`DROP`, `DELETE`, `INSERT`, etc.) are blocked. Injection patterns (UNION, comments, multi-statement, file ops, time-based attacks) are detected and rejected.
-- **Tiered Rate Limiting**: Separate limits for read (120/min), write (30/min), and LLM (20/min) operations.
+- **Tiered Rate Limiting**: Separate limits for read (120/min), write (30/min), and LLM (20/min) operations, configurable via `RATE_LIMIT_*_PER_MINUTE`.
+- **Per-Tool Access Control**: `MCP_TOOLS_ALLOW` / `MCP_TOOLS_DENY` restrict which tools are exposed, enforced at registration and inside `batch_execute` / `run_workflow`.
 - **Audit Logging**: Every operation is logged with risk assessment (low/medium/high). Sensitive fields are automatically redacted. Log files are created with secure permissions (owner-only read/write).
 - **Secret Isolation**: API keys are never exposed to tool handlers. Error responses from Metabase are sanitized to prevent credential leakage.
 - **Redirect Protection**: API key headers are never forwarded on HTTP redirects.

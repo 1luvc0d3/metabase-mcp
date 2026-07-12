@@ -187,6 +187,6 @@ export function createReadOnlyGuardrails(): SQLGuardrails {
       'EXECUTE',
       'CALL',
     ],
-    rateLimit: { requestsPerMinute: 60 },
+    rateLimit: { requestsPerMinute: 60, readPerMinute: 120, writePerMinute: 30, llmPerMinute: 20 },
   });
 }
