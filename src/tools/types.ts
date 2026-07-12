@@ -11,6 +11,7 @@ import type { TieredRateLimiter } from '../security/rate-limiter.js';
 import type { AuditLogger } from '../security/audit-logger.js';
 import type { SchemaManager } from '../utils/schema-manager.js';
 import type { Logger } from '../config.js';
+import type { ToolGate } from '../security/tool-gate.js';
 
 /**
  * Subset of config exposed to tool handlers.
@@ -32,6 +33,8 @@ export interface ToolContext {
   auditLogger: AuditLogger;
   schemaManager: SchemaManager;
   logger: Logger;
+  /** Per-tool allow/deny gate; absent means all tools are allowed */
+  toolGate?: ToolGate;
 }
 
 export type ToolHandler<T = unknown> = (

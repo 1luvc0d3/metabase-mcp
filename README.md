@@ -90,7 +90,22 @@ Set environment variables or create a `.env` file (see `.env.example`):
 | `METABASE_TIMEOUT` | No | `30000` | Request timeout (ms) |
 | `METABASE_MAX_ROWS` | No | `10000` | Max rows returned per query |
 | `LOG_LEVEL` | No | `info` | Logging: `debug`, `info`, `warn`, `error` |
-| `RATE_LIMIT_REQUESTS_PER_MINUTE` | No | `60` | Rate limit threshold |
+| `MCP_TOOLS_ALLOW` | No | - | Comma-separated allowlist — only these tools are exposed |
+| `MCP_TOOLS_DENY` | No | - | Comma-separated denylist — these tools are never exposed (wins over allow) |
+| `RATE_LIMIT_READ_PER_MINUTE` | No | `120` | Read-tier rate limit |
+| `RATE_LIMIT_WRITE_PER_MINUTE` | No | `30` | Write-tier rate limit |
+| `RATE_LIMIT_LLM_PER_MINUTE` | No | `20` | LLM-tier rate limit |
+| `RATE_LIMIT_REQUESTS_PER_MINUTE` | No | - | Legacy: sets the read tier when `RATE_LIMIT_READ_PER_MINUTE` is unset |
+
+### Per-tool access control
+
+Server modes give coarse control (read / write / full); `MCP_TOOLS_ALLOW` and `MCP_TOOLS_DENY` refine it per tool. Denied tools are not registered with the MCP client at all, and the same policy is enforced on operations nested inside `batch_execute` and `run_workflow` — a denied tool can't be reached through a batch or pipeline. Deny always wins over allow.
+
+```bash
+# Expose read tools but never raw SQL
+MCP_MODE=read
+MCP_TOOLS_DENY=execute_query
+```
 
 ### Generate a Metabase API Key
 
@@ -228,7 +243,8 @@ Claude uses `execute_query` to run the query, then `generate_insights` which ask
 This server is designed for production use with multiple layers of protection:
 
 - **SQL Guardrails**: Only `SELECT` and `WITH` queries are allowed by default. DDL/DML statements (`DROP`, `DELETE`, `INSERT`, etc.) are blocked. Injection patterns (UNION, comments, multi-statement, file ops, time-based attacks) are detected and rejected.
-- **Tiered Rate Limiting**: Separate limits for read (120/min), write (30/min), and LLM (20/min) operations.
+- **Tiered Rate Limiting**: Separate limits for read (120/min), write (30/min), and LLM (20/min) operations, configurable via `RATE_LIMIT_*_PER_MINUTE`.
+- **Per-Tool Access Control**: `MCP_TOOLS_ALLOW` / `MCP_TOOLS_DENY` restrict which tools are exposed, enforced at registration and inside `batch_execute` / `run_workflow`.
 - **Audit Logging**: Every operation is logged with risk assessment (low/medium/high). Sensitive fields are automatically redacted. Log files are created with secure permissions (owner-only read/write).
 - **Secret Isolation**: API keys are never exposed to tool handlers. Error responses from Metabase are sanitized to prevent credential leakage.
 - **Redirect Protection**: API key headers are never forwarded on HTTP redirects.
