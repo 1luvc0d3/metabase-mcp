@@ -174,6 +174,73 @@ describe('Batch Tools Integration', () => {
       expect(result.content[0].text).not.toContain('\n');
     });
 
+    it('rejects operations disabled by the tool gate', async () => {
+      context.toolGate = (name: string) => name !== 'execute_query';
+
+      const handler = registeredTools.get('batch_execute')?.handler;
+      const result = await handler({
+        operations: [
+          { tool: 'execute_query', args: { database_id: 1, sql: 'SELECT 1' } },
+          { tool: 'list_dashboards' },
+        ],
+      });
+
+      const data = JSON.parse(result.content[0].text);
+      expect(data.succeeded).toBe(1);
+      expect(data.failed).toBe(1);
+      expect(data.results[0].error).toContain('disabled by server policy');
+      expect(mockClient.executeQuery).not.toHaveBeenCalled();
+    });
+
+    it('executes non-destructive write operations in write/full mode', async () => {
+      const handler = registeredTools.get('batch_execute')?.handler;
+      const result = await handler({
+        operations: [
+          { tool: 'create_dashboard', args: { name: 'New Dashboard' } },
+          { tool: 'create_card', args: { name: 'New Card', database_id: 1, sql: 'SELECT 1' } },
+        ],
+      });
+
+      const data = JSON.parse(result.content[0].text);
+      expect(data.succeeded).toBe(2);
+      expect(mockClient.createDashboard).toHaveBeenCalledWith(
+        expect.objectContaining({ name: 'New Dashboard' })
+      );
+      expect(mockClient.createCard).toHaveBeenCalled();
+    });
+
+    it('validates SQL in create_card operations', async () => {
+      const handler = registeredTools.get('batch_execute')?.handler;
+      const result = await handler({
+        operations: [
+          { tool: 'create_card', args: { name: 'Bad Card', database_id: 1, sql: 'DROP TABLE users' } },
+        ],
+      });
+
+      const data = JSON.parse(result.content[0].text);
+      expect(data.failed).toBe(1);
+      expect(data.results[0].error).toContain('SQL validation failed');
+      expect(mockClient.createCard).not.toHaveBeenCalled();
+    });
+
+    it('rejects write operations in read mode', async () => {
+      (context.config as any).mode = 'read';
+
+      const handler = registeredTools.get('batch_execute')?.handler;
+      const result = await handler({
+        operations: [
+          { tool: 'create_dashboard', args: { name: 'New Dashboard' } },
+          { tool: 'list_dashboards' },
+        ],
+      });
+
+      const data = JSON.parse(result.content[0].text);
+      expect(data.succeeded).toBe(1);
+      expect(data.failed).toBe(1);
+      expect(data.results[0].error).toContain('requires write or full mode');
+      expect(mockClient.createDashboard).not.toHaveBeenCalled();
+    });
+
     it('includes timing information', async () => {
       const handler = registeredTools.get('batch_execute')?.handler;
       const result = await handler({

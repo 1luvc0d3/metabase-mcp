@@ -36,6 +36,11 @@ describe('loadConfig()', () => {
     delete process.env.ALLOWED_SQL_PATTERNS;
     delete process.env.BLOCKED_SQL_PATTERNS;
     delete process.env.RATE_LIMIT_REQUESTS_PER_MINUTE;
+    delete process.env.RATE_LIMIT_READ_PER_MINUTE;
+    delete process.env.RATE_LIMIT_WRITE_PER_MINUTE;
+    delete process.env.RATE_LIMIT_LLM_PER_MINUTE;
+    delete process.env.MCP_TOOLS_ALLOW;
+    delete process.env.MCP_TOOLS_DENY;
     delete process.env.LOG_LEVEL;
     delete process.env.AUDIT_LOG_FILE;
     delete process.env.MCP_TRANSPORT;
@@ -326,6 +331,74 @@ describe('loadConfig()', () => {
       expect(config.security.blockedPatterns).toContain('REVOKE');
       expect(config.security.blockedPatterns).toContain('EXEC');
       expect(config.security.blockedPatterns).toContain('EXECUTE');
+    });
+  });
+
+  describe('tiered rate limits', () => {
+    beforeEach(() => {
+      process.env.METABASE_URL = 'https://metabase.example.com';
+      process.env.METABASE_API_KEY = 'test-key';
+    });
+
+    it('defaults tiers to 120/30/20', () => {
+      const config = loadConfig();
+      expect(config.security.rateLimit.readPerMinute).toBe(120);
+      expect(config.security.rateLimit.writePerMinute).toBe(30);
+      expect(config.security.rateLimit.llmPerMinute).toBe(20);
+    });
+
+    it('loads tier-specific values from env', () => {
+      process.env.RATE_LIMIT_READ_PER_MINUTE = '200';
+      process.env.RATE_LIMIT_WRITE_PER_MINUTE = '50';
+      process.env.RATE_LIMIT_LLM_PER_MINUTE = '10';
+
+      const config = loadConfig();
+      expect(config.security.rateLimit.readPerMinute).toBe(200);
+      expect(config.security.rateLimit.writePerMinute).toBe(50);
+      expect(config.security.rateLimit.llmPerMinute).toBe(10);
+    });
+
+    it('applies legacy RATE_LIMIT_REQUESTS_PER_MINUTE to the read tier', () => {
+      process.env.RATE_LIMIT_REQUESTS_PER_MINUTE = '90';
+
+      const config = loadConfig();
+      expect(config.security.rateLimit.readPerMinute).toBe(90);
+      expect(config.security.rateLimit.writePerMinute).toBe(30);
+    });
+
+    it('prefers RATE_LIMIT_READ_PER_MINUTE over the legacy variable', () => {
+      process.env.RATE_LIMIT_REQUESTS_PER_MINUTE = '90';
+      process.env.RATE_LIMIT_READ_PER_MINUTE = '150';
+
+      const config = loadConfig();
+      expect(config.security.rateLimit.readPerMinute).toBe(150);
+    });
+  });
+
+  describe('tool access lists', () => {
+    beforeEach(() => {
+      process.env.METABASE_URL = 'https://metabase.example.com';
+      process.env.METABASE_API_KEY = 'test-key';
+    });
+
+    it('defaults allow and deny to undefined', () => {
+      const config = loadConfig();
+      expect(config.tools.allow).toBeUndefined();
+      expect(config.tools.deny).toBeUndefined();
+    });
+
+    it('parses MCP_TOOLS_ALLOW as comma-separated array', () => {
+      process.env.MCP_TOOLS_ALLOW = 'list_dashboards,get_dashboard, execute_card';
+
+      const config = loadConfig();
+      expect(config.tools.allow).toEqual(['list_dashboards', 'get_dashboard', 'execute_card']);
+    });
+
+    it('parses MCP_TOOLS_DENY as comma-separated array', () => {
+      process.env.MCP_TOOLS_DENY = 'execute_query,delete_card';
+
+      const config = loadConfig();
+      expect(config.tools.deny).toEqual(['execute_query', 'delete_card']);
     });
   });
 
