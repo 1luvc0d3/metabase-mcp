@@ -331,7 +331,7 @@ When using NLQ or insight tools (`ask_data`, `generate_insights`, etc.), **query
 ### Claude Desktop: extension installed but tools not appearing
 - Fully quit and restart Claude Desktop
 - Check logs: `~/Library/Logs/Claude/mcp*.log` on macOS
-- Verify `node --version` is >= 18
+- Verify `node --version` is >= 20
 
 ## Feedback Wanted
 
