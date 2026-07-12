@@ -32,7 +32,7 @@ async function main() {
   // Initialize MCP server
   const server = new McpServer({
     name: 'metabase-mcp',
-    version: '1.4.0',
+    version: '1.4.1',
   });
 
   // Initialize core services
