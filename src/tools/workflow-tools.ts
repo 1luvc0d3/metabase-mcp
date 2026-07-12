@@ -10,23 +10,41 @@ import type { ToolContext } from './types.js';
 import { createCompactTextResponse, createErrorResponse } from './types.js';
 import { formatQueryResult, formatSchemaResult } from '../utils/response-formatter.js';
 import { SQLValidationError } from '../utils/errors.js';
+import {
+  BATCHABLE_WRITE_TOOLS,
+  executeWriteOperation,
+  isBatchableWriteTool,
+  isWriteModeEnabled,
+} from './write-operations.js';
 
 const MAX_STEPS = 10;
 
-const stepSchema = z.object({
-  name: z.string().describe('Unique step name for referencing results (e.g. "find_dashboards")'),
-  tool: z.enum([
-    'list_dashboards', 'get_dashboard', 'list_cards', 'get_card',
-    'execute_card', 'list_databases', 'get_database_schema',
-    'execute_query', 'search_content', 'get_collections',
-  ]).describe('Tool to execute'),
-  args: z.record(z.unknown()).optional()
-    .describe('Tool arguments. Use "$stepName.path.to.value" to reference previous step results'),
-  on_error: z.enum(['abort', 'continue']).optional()
-    .describe('Error handling: "abort" stops the workflow (default), "continue" skips to next step'),
-});
+const READ_STEP_TOOLS = [
+  'list_dashboards', 'get_dashboard', 'list_cards', 'get_card',
+  'execute_card', 'list_databases', 'get_database_schema',
+  'execute_query', 'search_content', 'get_collections',
+] as const;
 
-type Step = z.infer<typeof stepSchema>;
+function buildStepSchema(writeEnabled: boolean) {
+  const tools = writeEnabled
+    ? [...READ_STEP_TOOLS, ...BATCHABLE_WRITE_TOOLS]
+    : [...READ_STEP_TOOLS];
+  return z.object({
+    name: z.string().describe('Unique step name for referencing results (e.g. "find_dashboards")'),
+    tool: z.enum(tools as [string, ...string[]]).describe('Tool to execute'),
+    args: z.record(z.unknown()).optional()
+      .describe('Tool arguments. Use "$stepName.path.to.value" to reference previous step results'),
+    on_error: z.enum(['abort', 'continue']).optional()
+      .describe('Error handling: "abort" stops the workflow (default), "continue" skips to next step'),
+  });
+}
+
+interface Step {
+  name: string;
+  tool: string;
+  args?: Record<string, unknown>;
+  on_error?: 'abort' | 'continue';
+}
 
 /**
  * Resolve template references like "$find.dashboards[0].id" against workflow context.
@@ -83,6 +101,13 @@ async function executeStep(
     throw new Error(`Tool '${step.tool}' is disabled by server policy`);
   }
   const args = step.args ? resolveValue(step.args, workflowContext) as Record<string, unknown> : {};
+
+  if (isBatchableWriteTool(step.tool)) {
+    if (!isWriteModeEnabled(ctx)) {
+      throw new Error(`Tool '${step.tool}' requires write or full mode`);
+    }
+    return await executeWriteOperation(step.tool, args, ctx);
+  }
 
   switch (step.tool) {
     case 'list_dashboards': {
@@ -193,14 +218,21 @@ async function executeStep(
 }
 
 export function registerWorkflowTools(server: McpServer, ctx: ToolContext): void {
+  const writeEnabled = isWriteModeEnabled(ctx);
+  const stepSchema = buildStepSchema(writeEnabled);
+
+  const description = writeEnabled
+    ? `Execute a multi-step workflow pipeline in a single call. Steps run sequentially and can reference previous step results using "$stepName.path" syntax. Supports read tools and non-destructive write tools (${BATCHABLE_WRITE_TOOLS.join(', ')}) — e.g. create a card, then add it to a dashboard, in one call. Delete operations are not allowed in workflows. Max ${MAX_STEPS} steps.`
+    : `Execute a multi-step workflow pipeline in a single call. Steps run sequentially and can reference previous step results using "$stepName.path" syntax. Example: search for dashboards, then get details of the first result, then execute its cards — all in one call. Max ${MAX_STEPS} steps.`;
+
   server.tool(
     'run_workflow',
-    `Execute a multi-step workflow pipeline in a single call. Steps run sequentially and can reference previous step results using "$stepName.path" syntax. Example: search for dashboards, then get details of the first result, then execute its cards — all in one call. Max ${MAX_STEPS} steps.`,
+    description,
     {
       steps: z.array(stepSchema).min(1).max(MAX_STEPS)
         .describe('Ordered pipeline steps. Each step can reference results from previous steps.'),
     },
-    { title: 'Run Workflow', readOnlyHint: true, openWorldHint: true },
+    { title: 'Run Workflow', readOnlyHint: !writeEnabled, destructiveHint: writeEnabled, openWorldHint: true },
     async ({ steps }) => {
       try {
         ctx.rateLimiter.checkLimit('read');

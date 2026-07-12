@@ -36,8 +36,8 @@ Metabase shipped an [official MCP server in v0.60](https://www.metabase.com/docs
 ## Features
 
 - **30 tools** across read, batch, workflow, write, NLQ, and insight categories
-- **Batch execution** -- run up to 20 read operations in parallel in a single call
-- **Workflow pipelines** -- chain tools sequentially with `$stepName.path` output references between steps
+- **Batch execution** -- run up to 20 operations in parallel in a single call (reads always; non-destructive writes in write/full mode)
+- **Workflow pipelines** -- chain tools sequentially with `$stepName.path` output references between steps, including write steps (e.g. create a card, then add it to a dashboard, in one call)
 - **Compact responses by default** -- all tools return compact JSON (~50% token reduction); opt into pretty-printing with `format: "default"`
 - **Natural language to SQL** -- ask questions, get SQL + results (powered by Claude)
 - **SQL guardrails** -- injection detection, DDL/DML blocking, dangerous pattern enforcement
@@ -150,6 +150,8 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
 **Batch & Workflow (always available)**
 `batch_execute`, `run_workflow`
 
+In `write`/`full` mode, both also accept the non-destructive write tools (`create_card`, `update_card`, `create_dashboard`, `update_dashboard`, `add_card_to_dashboard`, `create_collection`, `move_to_collection`). Delete/remove operations are never batchable — they must be explicit single tool calls.
+
 **Write (write/full modes)**
 `create_card`, `update_card`, `delete_card`, `create_dashboard`, `update_dashboard`, `delete_dashboard`, `add_card_to_dashboard`, `remove_card_from_dashboard`, `create_collection`, `move_to_collection`
 
@@ -229,6 +231,22 @@ Claude uses `run_workflow` to chain the steps with output references:
 ```
 
 Each step can reference results from previous steps using `$stepName.path[index].field` syntax. One round trip instead of three back-and-forth exchanges.
+
+In `write`/`full` mode, pipelines can also build content:
+
+> **You**: Save this query as a card and put it on a new "Growth" dashboard
+
+```json
+{
+  "steps": [
+    { "name": "card", "tool": "create_card", "args": { "name": "MAU Trend", "database_id": 2, "sql": "SELECT ..." } },
+    { "name": "dash", "tool": "create_dashboard", "args": { "name": "Growth" } },
+    { "name": "link", "tool": "add_card_to_dashboard", "args": { "dashboard_id": "$dash.id", "card_id": "$card.id" } }
+  ]
+}
+```
+
+Write steps go through the same guardrails as the standalone write tools: write-tier rate limiting, SQL validation, and per-operation audit logging. Destructive operations (deletes/removes) are not allowed in pipelines.
 
 ### 7. Automated insights on query results (full mode)
 
