@@ -34,9 +34,9 @@ This server exists for the setups it doesn't fit:
 | Automated insights & trend analysis | ✅ | ❌ |
 | Inline interactive charts rendered in the AI client | ❌ | ✅ (v62+) |
 | SQL injection guardrails | ✅ | permission-based |
-| Tiered rate limiting (read / write / LLM) | ✅ | ❌ |
-| Per-operation audit logging with risk levels | ✅ | ❌ (v63 logs OAuth authorizations only) |
-| Server modes / per-tool allow & deny lists | ✅ | ❌ (instance-wide on/off) |
+| Tiered rate limiting (read / write / LLM) | ✅ | blanket 1,000 req/min per user |
+| Per-operation audit logging with risk levels | ✅ | partial (Enterprise usage analytics; OAuth event log) |
+| Server modes / per-tool allow & deny lists | ✅ | ❌ (instance-wide on/off + an `execute_sql` kill switch) |
 | API-key auth over MCP (headless, CI, agents, VPN'd self-hosted) | ✅ | ❌ (MCP endpoint is OAuth browser flow only) |
 | OAuth per-user permission scoping | ❌ (API key) | ✅ |
 | Works on Metabase &lt; v0.60 (no upgrade required) | ✅ | ❌ |
