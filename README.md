@@ -11,41 +11,43 @@ The **headless, AI-augmented** [MCP](https://modelcontextprotocol.io/) server fo
 
 ## Why This One?
 
-Metabase ships an [official MCP server](https://www.metabase.com/docs/latest/ai/mcp) (v0.60+), and as of v0.61/v0.62 it covers both read and write operations — creating and updating questions, dashboards, and collections, plus raw SQL execution. It's good, and if it fits your setup you should consider it.
+Metabase ships an [official MCP server](https://www.metabase.com/docs/latest/ai/mcp) (v0.60+), and since v0.61/v0.62 it covers both read and write operations — creating and updating questions, dashboards, and collections, plus raw SQL execution. It's good, and if it fits your setup you should consider it.
 
 This server exists for the setups it doesn't fit:
 
-- **Headless / agent use.** The official MCP is OAuth-only, which requires a browser flow and a publicly reachable HTTPS instance. This server authenticates with a Metabase API key — it works in CI, in autonomous agents, and on self-hosted instances behind a VPN.
+- **Headless / agent use.** The official server's MCP endpoint is OAuth-only, which requires a browser flow and a reachable HTTPS instance. (Metabase's underlying Agent API does accept API keys — but that capability isn't exposed over MCP.) This server authenticates with a Metabase API key over MCP — it works in CI, in autonomous agents, and on self-hosted instances behind a VPN.
 - **AI inside the server.** NLQ-to-SQL, SQL explain/optimize/validate, automated insights, and trend analysis run in the server with your own Anthropic key — independent of which AI client connects.
-- **Operational control.** The official MCP is an instance-wide on/off switch. This server has read/write/full modes, SQL injection guardrails, tiered rate limits, and risk-scored audit logging.
+- **Operational control.** In Metabase's own words, their MCP server "doesn't come with granular control over which tools people can use" ([docs](https://www.metabase.com/docs/latest/ai/overview)) — it's an instance-wide on/off switch. This server has read/write/full modes, per-tool allow/deny lists, SQL injection guardrails, tiered rate limits, and risk-scored audit logging of every operation.
 - **Composition.** `batch_execute` (up to 20 parallel ops) and `run_workflow` (chained steps with output references) have no official equivalent.
 - **Any Metabase version** — including pre-v0.60 instances that can't use the official MCP at all.
 
-| Capability | @ai-1luvc0d3/metabase-mcp | Metabase Official (v0.62) |
+| Capability | @ai-1luvc0d3/metabase-mcp | Metabase Official (v63) |
 |---|:--:|:--:|
 | Read dashboards / cards / databases | ✅ | ✅ |
-| Create & update questions, dashboards, collections | ✅ | ✅ (v0.61+/v0.62+) |
-| Raw SQL execution | ✅ SELECT-only + guardrails | ✅ (v0.62+, needs native-query permission) |
-| Delete / archive cards & dashboards | ✅ | ❌ |
+| Create & update questions, dashboards, collections | ✅ | ✅ (v61+) |
+| Raw SQL execution | ✅ SELECT-only + guardrails | ✅ (v62+, needs native-query permission) |
+| Delete cards & dashboards | ✅ | ❌ (archive-only, via update) |
 | Add / remove cards on a dashboard | ✅ | ❌ |
 | Batch execution (parallel multi-op in one call) | ✅ | ❌ |
 | Workflow pipelines (chained steps with output references) | ✅ | ❌ |
 | NLQ → SQL + explain / optimize / validate (LLM in the server) | ✅ | ❌ (relies on the AI client) |
 | Automated insights & trend analysis | ✅ | ❌ |
-| Inline interactive charts rendered in the AI client | ❌ | ✅ (v0.62+) |
+| Inline interactive charts rendered in the AI client | ❌ | ✅ (v62+) |
 | SQL injection guardrails | ✅ | permission-based |
-| Tiered rate limiting (read / write / LLM) | ✅ | ❌ |
-| Audit logging with risk levels | ✅ | ❌ |
-| Server modes / tool-level gating | ✅ | ❌ (instance-wide on/off) |
-| API-key auth (headless, CI, agents, VPN'd self-hosted) | ✅ | ❌ (OAuth browser flow only) |
+| Tiered rate limiting (read / write / LLM) | ✅ | blanket 1,000 req/min per user |
+| Per-operation audit logging with risk levels | ✅ | partial (Enterprise usage analytics; OAuth event log) |
+| Server modes / per-tool allow & deny lists | ✅ | ❌ (instance-wide on/off + an `execute_sql` kill switch) |
+| API-key auth over MCP (headless, CI, agents, VPN'd self-hosted) | ✅ | ❌ (MCP endpoint is OAuth browser flow only) |
 | OAuth per-user permission scoping | ❌ (API key) | ✅ |
 | Works on Metabase &lt; v0.60 (no upgrade required) | ✅ | ❌ |
 
 **Use this if:** you're running agents or CI that can't do an OAuth browser flow, your self-hosted Metabase isn't publicly reachable, you want AI-generated insights server-side, you need audit logs and rate limits, or you're on a Metabase version older than v0.60.
 
-**Use Metabase's official MCP if:** you're on v0.62+, your instance is reachable for OAuth, and per-user permission scoping or inline interactive charts matter more to you than the above.
+**Use Metabase's official MCP if:** you're on v62+, your instance is reachable for OAuth, and per-user permission scoping or inline interactive charts matter more to you than the above.
 
-Other community Metabase MCP servers exist too — some with broader raw API coverage. This one prioritizes safety rails and token efficiency over exposing every endpoint.
+### And the other community servers?
+
+Several community Metabase MCP servers exist, some exposing far more of the raw REST API (90+ tools). This one makes a different trade: a curated tool surface with production controls. As of August 2026, it is the only Metabase MCP server — official or community — with SQL injection guardrails, tiered rate limiting, per-operation audit logging, and per-tool access control enforced inside batch and workflow calls. If you want maximum raw API coverage, one of the broad-CRUD servers may fit better; if an agent is going to touch your BI unattended, safety rails are the feature.
 
 ## Features
 
