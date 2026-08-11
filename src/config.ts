@@ -16,6 +16,7 @@ const ServerModeSchema = z.enum(['read', 'write', 'full']).default('read');
 const MetabaseConfigSchema = z.object({
   url: z.string().url('METABASE_URL must be a valid URL'),
   apiKey: z.string().optional(),
+  sessionToken: z.string().optional(),
   timeout: z.number().min(1000).max(300000).default(30000),
   maxRows: z.number().min(1).max(100000).default(10000),
 });
@@ -94,6 +95,7 @@ export function loadConfig(): AppConfig {
       metabase: {
         url: process.env.METABASE_URL,
         apiKey: process.env.METABASE_API_KEY || undefined,
+        sessionToken: process.env.METABASE_SESSION_TOKEN || undefined,
         timeout: parseIntOrDefault(process.env.METABASE_TIMEOUT, 30000),
         maxRows: parseIntOrDefault(process.env.METABASE_MAX_ROWS, 10000),
       },
@@ -191,6 +193,8 @@ export async function validateConfig(config: AppConfig): Promise<{
     const headers: Record<string, string> = {};
     if (config.metabase.apiKey) {
       headers['X-API-Key'] = config.metabase.apiKey;
+    } else if (config.metabase.sessionToken) {
+      headers['X-Metabase-Session'] = config.metabase.sessionToken;
     }
 
     const response = await fetch(`${config.metabase.url}/api/health`, {

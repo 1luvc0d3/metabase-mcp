@@ -236,6 +236,7 @@ export type ServerMode = 'read' | 'write' | 'full';
 export interface MetabaseConfig {
   url: string;
   apiKey?: string;
+  sessionToken?: string;
   timeout: number;
   maxRows: number;
 }
