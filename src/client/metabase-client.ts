@@ -22,12 +22,14 @@ export class MetabaseClient {
   private timeout: number;
   private maxRows: number;
   private apiKey?: string;
+  private sessionToken?: string;
 
   constructor(config: MetabaseConfig) {
     this.baseUrl = config.url.replace(/\/$/, ''); // Remove trailing slash
     this.timeout = config.timeout;
     this.maxRows = config.maxRows;
     this.apiKey = config.apiKey;
+    this.sessionToken = config.sessionToken;
   }
 
   // ============================================================================
@@ -83,6 +85,8 @@ export class MetabaseClient {
 
     if (this.apiKey) {
       headers['X-API-Key'] = this.apiKey;
+    } else if (this.sessionToken) {
+      headers['X-Metabase-Session'] = this.sessionToken;
     }
 
     return headers;
