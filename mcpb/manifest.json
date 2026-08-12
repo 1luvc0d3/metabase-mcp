@@ -2,9 +2,9 @@
   "manifest_version": "0.4",
   "name": "metabase-mcp",
   "display_name": "Metabase",
-  "version": "1.1.0",
+  "version": "1.4.2",
   "description": "Query and manage Metabase dashboards, cards, and data via Claude",
-  "long_description": "Production-grade MCP server for Metabase with SQL injection guardrails, tiered rate limiting, and audit logging. Features 28 tools for reading, writing, natural-language-to-SQL generation, and AI-powered insights.",
+  "long_description": "Production-grade MCP server for Metabase with SQL injection guardrails, tiered rate limiting, per-tool access control, and audit logging. Features 30 tools for reading, writing, batch execution, workflow pipelines, natural-language-to-SQL generation, and AI-powered insights.",
   "author": {
     "name": "1luvc0d3",
     "url": "https://github.com/1luvc0d3"
@@ -81,6 +81,8 @@
     { "name": "execute_query", "description": "Execute a SELECT SQL query against a database" },
     { "name": "search_content", "description": "Search across Metabase content" },
     { "name": "get_collections", "description": "List collections" },
+    { "name": "batch_execute", "description": "Execute up to 20 operations in parallel in a single call" },
+    { "name": "run_workflow", "description": "Run a multi-step pipeline with output references between steps" },
     { "name": "create_card", "description": "Create a new card (saved question)" },
     { "name": "update_card", "description": "Update an existing card" },
     { "name": "delete_card", "description": "Archive a card" },
@@ -109,7 +111,7 @@
     "claude_desktop": ">=0.10.0",
     "platforms": ["darwin", "win32", "linux"],
     "runtimes": {
-      "node": ">=18.0.0"
+      "node": ">=20.0.0"
     }
   }
 }
