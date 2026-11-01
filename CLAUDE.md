@@ -84,6 +84,7 @@ API key authentication via `METABASE_API_KEY`. The key is passed as `X-API-Key` 
 - **src/security/sql-guardrails.ts** - SQL validation, injection detection, blocked pattern enforcement
 - **src/security/rate-limiter.ts** - Tiered rate limiting (read: 60/min, write: 30/min, llm: 20/min)
 - **src/security/audit-logger.ts** - Operation logging with risk assessment
+- **src/security/column-redactor.ts** - Masks/drops configured columns in query results; applied inside `MetabaseClient.executeCard`/`executeQuery`
 
 ### Utilities
 
@@ -98,6 +99,8 @@ API key authentication via `METABASE_API_KEY`. The key is passed as `X-API-Key` 
 | `METABASE_API_KEY` | Yes | - | Metabase API key |
 | `MCP_MODE` | No | `read` | Server mode: `read`, `write`, or `full` |
 | `ANTHROPIC_API_KEY` | For NLQ/insights | - | Enables NLQ and insight tools |
+| `MCP_REDACT_COLUMNS` | No | - | Column names to redact from query results (`*` wildcard) |
+| `MCP_REDACT_MODE` | No | `mask` | `mask` or `drop` |
 
 ## Server Modes
 

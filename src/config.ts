@@ -48,6 +48,11 @@ const ToolAccessSchema = z.object({
   deny: z.array(z.string()).optional(),
 }).default({});
 
+const RedactionSchema = z.object({
+  columns: z.array(z.string()).default([]),
+  mode: z.enum(['mask', 'drop']).default('mask'),
+}).default({});
+
 const LLMConfigSchema = z.object({
   model: z.string().default('claude-sonnet-4-20250514'),
   fallbackModel: z.string().optional(),
@@ -70,6 +75,7 @@ const AppConfigSchema = z.object({
   llm: LLMConfigSchema,
   security: SecurityConfigSchema,
   tools: ToolAccessSchema,
+  redaction: RedactionSchema,
   logging: LoggingConfigSchema,
   transport: z.enum(['stdio', 'http']).default('stdio'),
   http: z.object({
@@ -125,6 +131,10 @@ export function loadConfig(): AppConfig {
       tools: {
         allow: parseArrayOrDefault(process.env.MCP_TOOLS_ALLOW, undefined),
         deny: parseArrayOrDefault(process.env.MCP_TOOLS_DENY, undefined),
+      },
+      redaction: {
+        columns: parseArrayOrDefault(process.env.MCP_REDACT_COLUMNS, []),
+        mode: (process.env.MCP_REDACT_MODE || undefined) as 'mask' | 'drop' | undefined,
       },
       logging: {
         level: process.env.LOG_LEVEL as 'debug' | 'info' | 'warn' | 'error',

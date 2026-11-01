@@ -108,6 +108,8 @@ Set environment variables or create a `.env` file (see `.env.example`):
 | `LOG_LEVEL` | No | `info` | Logging: `debug`, `info`, `warn`, `error` |
 | `MCP_TOOLS_ALLOW` | No | - | Comma-separated allowlist — only these tools are exposed |
 | `MCP_TOOLS_DENY` | No | - | Comma-separated denylist — these tools are never exposed (wins over allow) |
+| `MCP_REDACT_COLUMNS` | No | - | Comma-separated column names to redact from query results (case-insensitive, `*` wildcard) |
+| `MCP_REDACT_MODE` | No | `mask` | `mask` replaces values with `[REDACTED]`; `drop` removes the columns entirely |
 | `RATE_LIMIT_READ_PER_MINUTE` | No | `120` | Read-tier rate limit |
 | `RATE_LIMIT_WRITE_PER_MINUTE` | No | `30` | Write-tier rate limit |
 | `RATE_LIMIT_LLM_PER_MINUTE` | No | `20` | LLM-tier rate limit |
@@ -122,6 +124,23 @@ Server modes give coarse control (read / write / full); `MCP_TOOLS_ALLOW` and `M
 MCP_MODE=read
 MCP_TOOLS_DENY=execute_query
 ```
+
+### Column redaction
+
+`MCP_REDACT_COLUMNS` keeps chosen columns out of the AI's context while people keep full access to them in Metabase. Every query result is redacted inside the server, before it reaches the MCP client or the in-server LLM (NLQ and insight tools), including results from `batch_execute` and `run_workflow`.
+
+```bash
+# Mask emails, phone numbers and anything ending in _ssn
+MCP_REDACT_COLUMNS=email,phone*,*_ssn
+MCP_REDACT_MODE=mask   # or drop
+```
+
+- **mask** (default) keeps the column and replaces every value with `[REDACTED]`, so the agent knows the column exists and can still reason about the query's shape.
+- **drop** removes the column from the result entirely.
+
+Metabase metadata that would leak values is stripped for redacted columns too: column fingerprints (min/max/average statistics) in query results, cards and dashboards, timeseries insights, and the filter values Metabase returns with a dashboard. Each redaction is written to the audit log with the column names and cell count.
+
+**What this protects against:** accidental exposure by a well-behaved agent, such as `SELECT *`, `SELECT email, name` or running a saved question that includes a sensitive column. **What it doesn't:** matching is by result column name, so a query that renames a column (`SELECT email AS e`) or packs a row into one value (`row_to_json(u)`) gets around it, and so does an adversarial or prompt-injected agent. Aggregates come back under their own names (`max(salary)` returns a column called `max`), and Metabase suffixes duplicate names in joins (`email_2`) — use a wildcard like `email*` to catch those. For a hard boundary, restrict the API key's group with Metabase permissions or point it at database views without the sensitive columns.
 
 ### Generate a Metabase API Key
 
@@ -279,13 +298,14 @@ This server is designed for production use with multiple layers of protection:
 - **SQL Guardrails**: Only `SELECT` and `WITH` queries are allowed by default. DDL/DML statements (`DROP`, `DELETE`, `INSERT`, etc.) are blocked. Injection patterns (UNION, comments, multi-statement, file ops, time-based attacks) are detected and rejected.
 - **Tiered Rate Limiting**: Separate limits for read (120/min), write (30/min), and LLM (20/min) operations, configurable via `RATE_LIMIT_*_PER_MINUTE`.
 - **Per-Tool Access Control**: `MCP_TOOLS_ALLOW` / `MCP_TOOLS_DENY` restrict which tools are exposed, enforced at registration and inside `batch_execute` / `run_workflow`.
+- **Column Redaction**: `MCP_REDACT_COLUMNS` masks or drops sensitive columns in every query result before it reaches the AI client or the in-server LLM. See [Column redaction](#column-redaction) for what it does and doesn't protect against.
 - **Audit Logging**: Every operation is logged with risk assessment (low/medium/high). Sensitive fields are automatically redacted. Log files are created with secure permissions (owner-only read/write).
 - **Secret Isolation**: API keys are never exposed to tool handlers. Error responses from Metabase are sanitized to prevent credential leakage.
 - **Redirect Protection**: API key headers are never forwarded on HTTP redirects.
 
 ### Data Privacy Note
 
-When using NLQ or insight tools (`ask_data`, `generate_insights`, etc.), **query result data is sent to the Anthropic API** for analysis. If your queries return sensitive data (PII, financial records, etc.), that data will be processed by Claude. Consider this when enabling NLQ features on databases containing sensitive information.
+When using NLQ or insight tools (`ask_data`, `generate_insights`, etc.), **query result data is sent to the Anthropic API** for analysis. If your queries return sensitive data (PII, financial records, etc.), that data will be processed by Claude. Consider this when enabling NLQ features on databases containing sensitive information. Columns listed in `MCP_REDACT_COLUMNS` are redacted before any data is sent.
 
 ## Privacy Policy
 

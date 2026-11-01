@@ -41,6 +41,8 @@ describe('loadConfig()', () => {
     delete process.env.RATE_LIMIT_LLM_PER_MINUTE;
     delete process.env.MCP_TOOLS_ALLOW;
     delete process.env.MCP_TOOLS_DENY;
+    delete process.env.MCP_REDACT_COLUMNS;
+    delete process.env.MCP_REDACT_MODE;
     delete process.env.LOG_LEVEL;
     delete process.env.AUDIT_LOG_FILE;
     delete process.env.MCP_TRANSPORT;
@@ -399,6 +401,31 @@ describe('loadConfig()', () => {
 
       const config = loadConfig();
       expect(config.tools.deny).toEqual(['execute_query', 'delete_card']);
+    });
+  });
+
+  describe('column redaction', () => {
+    beforeEach(() => {
+      process.env.METABASE_URL = 'https://metabase.example.com';
+      process.env.METABASE_API_KEY = 'test-key';
+    });
+
+    it('defaults to no redacted columns in mask mode', () => {
+      const config = loadConfig();
+      expect(config.redaction).toEqual({ columns: [], mode: 'mask' });
+    });
+
+    it('parses MCP_REDACT_COLUMNS and MCP_REDACT_MODE', () => {
+      process.env.MCP_REDACT_COLUMNS = 'email, *_ssn';
+      process.env.MCP_REDACT_MODE = 'drop';
+
+      const config = loadConfig();
+      expect(config.redaction).toEqual({ columns: ['email', '*_ssn'], mode: 'drop' });
+    });
+
+    it('rejects an invalid MCP_REDACT_MODE', () => {
+      process.env.MCP_REDACT_MODE = 'hash';
+      expect(() => loadConfig()).toThrow(ConfigurationError);
     });
   });
 

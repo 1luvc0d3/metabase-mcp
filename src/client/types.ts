@@ -134,6 +134,7 @@ export interface QueryResult {
     results_metadata?: {
       columns: ColumnMetadata[];
     };
+    insights?: Array<{ col?: string; [key: string]: unknown }> | null;
   };
   database_id: number;
   started_at: string;
@@ -151,12 +152,14 @@ export interface ColumnInfo {
   base_type: string;
   semantic_type: string | null;
   field_ref?: unknown[];
+  fingerprint?: unknown;
 }
 
 export interface ColumnMetadata {
   name: string;
   display_name: string;
   base_type: string;
+  fingerprint?: unknown;
 }
 
 // ============================================================================
@@ -273,6 +276,11 @@ export interface HttpTransportConfig {
   authToken?: string;
 }
 
+export interface RedactionConfig {
+  columns: string[];
+  mode: 'mask' | 'drop';
+}
+
 export interface AppConfig {
   mode: ServerMode;
   metabase: MetabaseConfig;
@@ -280,6 +288,7 @@ export interface AppConfig {
   llm: LLMConfig;
   security: SecurityConfig;
   tools: ToolAccessConfig;
+  redaction: RedactionConfig;
   logging: {
     level: 'debug' | 'info' | 'warn' | 'error';
     auditFile?: string;
