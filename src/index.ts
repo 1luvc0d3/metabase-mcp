@@ -11,6 +11,7 @@ import { LLMService } from './client/llm-service.js';
 import { SQLGuardrails } from './security/sql-guardrails.js';
 import { TieredRateLimiter } from './security/rate-limiter.js';
 import { createToolGate } from './security/tool-gate.js';
+import { ColumnRedactor } from './security/column-redactor.js';
 import { AuditLogger } from './security/audit-logger.js';
 import { SchemaManager } from './utils/schema-manager.js';
 import { registerTools } from './tools/index.js';
@@ -36,14 +37,31 @@ async function main() {
   });
 
   // Initialize core services
-  const metabaseClient = new MetabaseClient(config.metabase);
+  const auditLogger = new AuditLogger({ logFile: config.logging.auditFile });
+
+  // Column redaction, applied to every query result inside the client so it
+  // also covers data sent to the in-server LLM
+  const redactor = new ColumnRedactor({
+    columns: config.redaction.columns,
+    mode: config.redaction.mode,
+    onRedact: summary => auditLogger.log({
+      action: 'redact_columns',
+      details: { ...summary },
+      result: 'success',
+      riskLevel: 'low',
+    }),
+  });
+  if (redactor.enabled) {
+    logger.info('Column redaction active', { ...config.redaction });
+  }
+
+  const metabaseClient = new MetabaseClient(config.metabase, redactor);
   const sqlGuardrails = new SQLGuardrails(config.security);
   const rateLimiter = new TieredRateLimiter({
     read: { requestsPerMinute: config.security.rateLimit.readPerMinute },
     write: { requestsPerMinute: config.security.rateLimit.writePerMinute },
     nlq: { requestsPerMinute: config.security.rateLimit.llmPerMinute },
   });
-  const auditLogger = new AuditLogger({ logFile: config.logging.auditFile });
   const schemaManager = new SchemaManager(metabaseClient);
 
   // Initialize LLM service if API key is provided

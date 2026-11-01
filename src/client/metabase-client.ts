@@ -16,18 +16,21 @@ import type {
   CreateDashboardRequest,
 } from './types.js';
 import { MetabaseError, wrapError } from '../utils/errors.js';
+import type { ColumnRedactor } from '../security/column-redactor.js';
 
 export class MetabaseClient {
   private baseUrl: string;
   private timeout: number;
   private maxRows: number;
   private apiKey?: string;
+  private redactor?: ColumnRedactor;
 
-  constructor(config: MetabaseConfig) {
+  constructor(config: MetabaseConfig, redactor?: ColumnRedactor) {
     this.baseUrl = config.url.replace(/\/$/, ''); // Remove trailing slash
     this.timeout = config.timeout;
     this.maxRows = config.maxRows;
     this.apiKey = config.apiKey;
+    this.redactor = redactor?.enabled ? redactor : undefined;
   }
 
   // ============================================================================
@@ -74,6 +77,15 @@ export class MetabaseClient {
     } finally {
       clearTimeout(timeoutId);
     }
+  }
+
+  private redact(result: QueryResult): QueryResult {
+    return this.redactor ? this.redactor.redactQueryResult(result) : result;
+  }
+
+  /** Strip value fingerprints of redacted columns from card/dashboard metadata */
+  private scrub<T>(value: T): T {
+    return this.redactor ? this.redactor.scrubMetadata(value) : value;
   }
 
   private buildHeaders(): Record<string, string> {
@@ -129,7 +141,7 @@ export class MetabaseClient {
    * Get dashboard by ID (includes cards)
    */
   async getDashboard(id: number): Promise<Dashboard> {
-    return this.request<Dashboard>(`/dashboard/${id}`);
+    return this.scrub(await this.request<Dashboard>(`/dashboard/${id}`));
   }
 
   /**
@@ -167,14 +179,14 @@ export class MetabaseClient {
    * List all cards
    */
   async getCards(): Promise<Card[]> {
-    return this.request<Card[]>('/card');
+    return this.scrub(await this.request<Card[]>('/card'));
   }
 
   /**
    * Get card by ID
    */
   async getCard(id: number): Promise<Card> {
-    return this.request<Card>(`/card/${id}`);
+    return this.scrub(await this.request<Card>(`/card/${id}`));
   }
 
   /**
@@ -182,30 +194,30 @@ export class MetabaseClient {
    */
   async executeCard(id: number, parameters?: Record<string, unknown>): Promise<QueryResult> {
     const body = parameters ? { parameters } : {};
-    return this.request<QueryResult>(`/card/${id}/query`, {
+    return this.redact(await this.request<QueryResult>(`/card/${id}/query`, {
       method: 'POST',
       body: JSON.stringify(body),
-    });
+    }));
   }
 
   /**
    * Create a new card
    */
   async createCard(card: CreateCardRequest): Promise<Card> {
-    return this.request<Card>('/card', {
+    return this.scrub(await this.request<Card>('/card', {
       method: 'POST',
       body: JSON.stringify(card),
-    });
+    }));
   }
 
   /**
    * Update an existing card
    */
   async updateCard(id: number, updates: Partial<Card>): Promise<Card> {
-    return this.request<Card>(`/card/${id}`, {
+    return this.scrub(await this.request<Card>(`/card/${id}`, {
       method: 'PUT',
       body: JSON.stringify(updates),
-    });
+    }));
   }
 
   /**
@@ -223,14 +235,14 @@ export class MetabaseClient {
    * Execute a native SQL query
    */
   async executeQuery(databaseId: number, sql: string): Promise<QueryResult> {
-    return this.request<QueryResult>('/dataset', {
+    return this.redact(await this.request<QueryResult>('/dataset', {
       method: 'POST',
       body: JSON.stringify({
         database: databaseId,
         type: 'native',
         native: { query: sql },
       }),
-    });
+    }));
   }
 
   /**
