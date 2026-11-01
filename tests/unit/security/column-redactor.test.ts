@@ -156,6 +156,24 @@ describe('ColumnRedactor', () => {
     expect(Object.keys(dashboard.param_values)).toEqual(['11']);
   });
 
+  it('resolves param_values fields when param_fields is keyed by parameter id (v0.6x)', () => {
+    const redactor = new ColumnRedactor({ columns: ['source'] });
+    const dashboard = {
+      param_fields: {
+        p_source: [{ id: 30, name: 'SOURCE' }],
+        p_state: [{ id: 1, name: 'STATE' }],
+      },
+      param_values: {
+        '30': { field_id: 30, values: [['Google']] },
+        '1': { field_id: 1, values: [['CA']] },
+      },
+    };
+
+    redactor.scrubMetadata(dashboard);
+
+    expect(Object.keys(dashboard.param_values)).toEqual(['1']);
+  });
+
   it('scrubs fingerprints from nested card and dashboard metadata', () => {
     const redactor = new ColumnRedactor({ columns: ['salary'] });
     const dashboard = {

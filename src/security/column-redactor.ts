@@ -128,17 +128,21 @@ export class ColumnRedactor {
 
   /**
    * `param_values` is keyed by field id with no column name; names come from
-   * the sibling `param_fields`. Values whose field can't be resolved are
-   * dropped (fail closed) — they only populate filter pickers.
+   * the field objects in the sibling `param_fields` (keyed by field id on
+   * older versions, by parameter id on newer ones). Values whose field can't
+   * be resolved are dropped (fail closed) — they only populate filter pickers.
    */
   private scrubParamValues(obj: Record<string, unknown>): void {
     const paramValues = obj.param_values as Record<string, unknown>;
-    const paramFields = (obj.param_fields ?? {}) as Record<string, unknown>;
+    const names = new Map<string, unknown>();
+    for (const entry of Object.values((obj.param_fields ?? {}) as Record<string, unknown>)) {
+      for (const field of (Array.isArray(entry) ? entry : [entry]) as Array<{ id?: unknown; name?: unknown } | null>) {
+        if (field && field.id != null) names.set(String(field.id), field.name);
+      }
+    }
     for (const fieldId of Object.keys(paramValues)) {
-      const entry = paramFields[fieldId];
-      const fields = (Array.isArray(entry) ? entry : [entry]) as Array<{ name?: unknown } | null | undefined>;
-      const names = fields.map(f => f?.name).filter(n => typeof n === 'string');
-      if (names.length === 0 || names.some(n => this.matches(n))) delete paramValues[fieldId];
+      const name = names.get(fieldId);
+      if (typeof name !== 'string' || this.matches(name)) delete paramValues[fieldId];
     }
   }
 }
