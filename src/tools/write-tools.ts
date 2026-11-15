@@ -135,7 +135,7 @@ export function registerWriteTools(server: McpServer, ctx: ToolContext): void {
   // ============================================================================
   server.tool(
     'delete_card',
-    'Delete (archive) a question/card',
+    'Permanently delete a question/card. This cannot be undone: the card does not go to the Metabase trash',
     {
       card_id: z.number().describe('Card ID to delete'),
     },
@@ -148,7 +148,7 @@ export function registerWriteTools(server: McpServer, ctx: ToolContext): void {
 
         return createCompactTextResponse({
           success: true,
-          message: `Card ${card_id} has been archived`,
+          message: `Card ${card_id} has been permanently deleted`,
         });
       } catch (error) {
         ctx.auditLogger.logFailure('delete_card', error as Error, { card_id });
@@ -242,7 +242,7 @@ export function registerWriteTools(server: McpServer, ctx: ToolContext): void {
   // ============================================================================
   server.tool(
     'delete_dashboard',
-    'Delete (archive) a dashboard',
+    'Permanently delete a dashboard. This cannot be undone: the dashboard does not go to the Metabase trash',
     {
       dashboard_id: z.number().describe('Dashboard ID to delete'),
     },
@@ -255,7 +255,7 @@ export function registerWriteTools(server: McpServer, ctx: ToolContext): void {
 
         return createCompactTextResponse({
           success: true,
-          message: `Dashboard ${dashboard_id} has been archived`,
+          message: `Dashboard ${dashboard_id} has been permanently deleted`,
         });
       } catch (error) {
         ctx.auditLogger.logFailure('delete_dashboard', error as Error, { dashboard_id });
