@@ -41,6 +41,20 @@
           "isRequired": false,
           "isSecret": true,
           "format": "string"
+        },
+        {
+          "name": "MCP_REDACT_COLUMNS",
+          "description": "Comma-separated column names to redact from query results (case-insensitive, * wildcard), e.g. email,phone*,*_ssn",
+          "isRequired": false,
+          "format": "string"
+        },
+        {
+          "name": "MCP_REDACT_MODE",
+          "description": "mask replaces values with [REDACTED]; drop removes the columns entirely",
+          "isRequired": false,
+          "format": "string",
+          "default": "mask",
+          "choices": ["mask", "drop"]
         }
       ]
     }
