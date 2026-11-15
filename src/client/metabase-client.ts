@@ -165,7 +165,7 @@ export class MetabaseClient {
   }
 
   /**
-   * Delete (archive) a dashboard
+   * Permanently delete a dashboard (DELETE /api/dashboard/:id; not recoverable from trash)
    */
   async deleteDashboard(id: number): Promise<void> {
     await this.request(`/dashboard/${id}`, { method: 'DELETE' });
@@ -221,7 +221,7 @@ export class MetabaseClient {
   }
 
   /**
-   * Delete (archive) a card
+   * Permanently delete a card (DELETE /api/card/:id; not recoverable from trash)
    */
   async deleteCard(id: number): Promise<void> {
     await this.request(`/card/${id}`, { method: 'DELETE' });
