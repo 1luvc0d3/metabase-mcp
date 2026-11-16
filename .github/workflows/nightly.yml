@@ -1,0 +1,98 @@
+# End-to-end smoke test against real Metabase versions. The unit and integration tests mock
+# Metabase; this catches API shape changes and bugs that only show up against a live instance
+# (e.g. the 1.6.0 delete and execute_card parameter bugs).
+#
+# Matrix: the oldest version we claim to support (pre-MCP), the current LTS, and `latest`, which
+# floats so a new Metabase release is tested the night it ships. Bump the pinned versions when
+# a new LTS lands.
+#
+# Scheduled failures open (or comment on) a `nightly-e2e` issue; the next passing run closes it.
+name: Nightly E2E
+
+on:
+  schedule:
+    - cron: '17 6 * * *'
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'tests/e2e/**'
+      - '.github/workflows/nightly.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    name: e2e (${{ matrix.metabase }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        metabase: [v0.50.36, v0.64.6.2, latest]
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install and build
+        run: |
+          npm ci
+          npm run build
+
+      - name: Start Metabase ${{ matrix.metabase }}
+        run: docker run -d --name metabase -p 3000:3000 "metabase/metabase:${{ matrix.metabase }}"
+
+      - name: Set up Metabase (admin, API key, fixture card)
+        id: setup
+        env:
+          METABASE_URL: http://localhost:3000
+        run: node tests/e2e/setup-metabase.mjs
+
+      - name: Smoke test
+        env:
+          METABASE_URL: http://localhost:3000
+          METABASE_API_KEY: ${{ steps.setup.outputs.api_key }}
+          E2E_PARAM_CARD_ID: ${{ steps.setup.outputs.param_card_id }}
+          E2E_LABEL: Metabase ${{ steps.setup.outputs.metabase_version }} (${{ matrix.metabase }})
+        run: node tests/e2e/smoke.mjs
+
+      - name: Metabase logs
+        if: failure()
+        run: docker logs --tail 200 metabase
+
+  report:
+    needs: e2e
+    if: always() && github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Open, update or close the nightly-e2e issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RESULT: ${{ needs.e2e.result }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          existing=$(gh issue list -R "$REPO" --label nightly-e2e --state open --json number -q '.[0].number')
+          if [ "$RESULT" = success ]; then
+            if [ -n "$existing" ]; then
+              gh issue close "$existing" -R "$REPO" --comment "Passing again: $RUN_URL"
+            fi
+            exit 0
+          fi
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" -R "$REPO" --body "Still failing ($RESULT): $RUN_URL"
+          else
+            gh label create nightly-e2e -R "$REPO" --color B60205 \
+              --description "Nightly end-to-end test against real Metabase is failing" 2>/dev/null || true
+            gh issue create -R "$REPO" --label nightly-e2e \
+              --title "Nightly E2E failing against real Metabase" \
+              --body "The nightly end-to-end smoke test failed ($RESULT): $RUN_URL
+
+          Open the run's summary to see which Metabase version and which checks failed. To reproduce locally, see **End-to-end tests** in CLAUDE.md. This issue closes automatically when the nightly passes again."
+          fi

@@ -134,6 +134,22 @@ tests/
 
 Note: `vi.hoisted()` is needed for mock variables used in `vi.mock()` factory functions.
 
+### End-to-end tests (real Metabase)
+
+The unit and integration tests mock Metabase. `tests/e2e/` runs the built server through a real MCP client against a live instance (20 checks: queries, parameters, card and dashboard writes, batch, workflow, redaction, guardrails). `.github/workflows/nightly.yml` runs it every night against v0.50 (oldest supported), the current LTS and `latest`; failures open a `nightly-e2e` issue.
+
+Run it locally against a throwaway container:
+
+```bash
+docker run -d --name mb-e2e -p 3000:3000 metabase/metabase:latest
+npm run build
+eval "$(METABASE_URL=http://localhost:3000 node tests/e2e/setup-metabase.mjs | sed 's/^/export /')"
+METABASE_URL=http://localhost:3000 METABASE_API_KEY="$api_key" E2E_PARAM_CARD_ID="$param_card_id" npm run test:e2e
+docker rm -f mb-e2e
+```
+
+Against an instance that's already set up, pass `E2E_ADMIN_EMAIL` and `E2E_ADMIN_PASSWORD` to the setup script. It creates one fixture card per run; the smoke test deletes everything else it creates.
+
 ## Key Patterns
 
 ### Tool Registration Pattern
