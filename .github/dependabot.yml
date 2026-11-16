@@ -31,6 +31,13 @@ updates:
         applies-to: security-updates
         dependency-type: development
     # Major versions open one PR each and always need a human (e.g. zod 3 -> 4 is a migration).
+    ignore:
+      # Types must match the oldest supported Node (engines: >=20); bump with the engines field.
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major']
+      # ESLint 10 needs a config migration; do it deliberately rather than via Dependabot.
+      - dependency-name: eslint
+        update-types: ['version-update:semver-major']
 
   - package-ecosystem: github-actions
     directory: /
