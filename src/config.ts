@@ -41,18 +41,18 @@ const SecurityConfigSchema = z.object({
     readPerMinute: z.number().min(1).max(1000).default(120),
     writePerMinute: z.number().min(1).max(1000).default(30),
     llmPerMinute: z.number().min(1).max(1000).default(20),
-  }).default({}),
+  }).prefault({}),
 });
 
 const ToolAccessSchema = z.object({
   allow: z.array(z.string()).optional(),
   deny: z.array(z.string()).optional(),
-}).default({});
+}).prefault({});
 
 const RedactionSchema = z.object({
   columns: z.array(z.string()).default([]),
   mode: z.enum(['mask', 'drop']).default('mask'),
-}).default({});
+}).prefault({});
 
 const LLMConfigSchema = z.object({
   model: z.string().default('claude-sonnet-4-20250514'),
@@ -69,7 +69,7 @@ const LoggingConfigSchema = z.object({
   auditFile: z.string().optional(),
 });
 
-const AppConfigSchema = z.object({
+export const AppConfigSchema = z.object({
   mode: ServerModeSchema,
   metabase: MetabaseConfigSchema,
   anthropicApiKey: z.string().optional(),
@@ -84,7 +84,7 @@ const AppConfigSchema = z.object({
     host: z.string().default('127.0.0.1'),
     corsOrigin: z.string().optional(),
     authToken: z.string().optional(),
-  }).default({}),
+  }).prefault({}),
 });
 
 // ============================================================================

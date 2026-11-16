@@ -15,8 +15,44 @@ import type {
   CreateCardRequest,
   CreateDashboardRequest,
 } from './types.js';
-import { MetabaseError, wrapError } from '../utils/errors.js';
+import { MetabaseError, UserFriendlyError, wrapError } from '../utils/errors.js';
 import type { ColumnRedactor } from '../security/column-redactor.js';
+
+interface TemplateTag {
+  id?: string;
+  name: string;
+  'display-name'?: string;
+  type?: string;
+  'widget-type'?: string;
+}
+
+/**
+ * Template tags of a native card. Metabase >= v0.6x stores queries as stages with a
+ * template-tags list; older versions keep a native query with a template-tags map.
+ */
+function templateTags(card: Card): TemplateTag[] {
+  const query = card.dataset_query as unknown as {
+    native?: { 'template-tags'?: Record<string, TemplateTag> };
+    stages?: Array<{ 'template-tags'?: TemplateTag[] | Record<string, TemplateTag> }>;
+  };
+  const tags = query?.native?.['template-tags'] ?? query?.stages?.[0]?.['template-tags'];
+  if (!tags) return [];
+  return Array.isArray(tags) ? tags : Object.values(tags);
+}
+
+/** Parameter type Metabase expects for a template tag's value. */
+function parameterType(tag: TemplateTag): string {
+  switch (tag.type) {
+    case 'number':
+      return 'number/=';
+    case 'date':
+      return 'date/single';
+    case 'dimension':
+      return tag['widget-type'] ?? 'category';
+    default:
+      return 'category';
+  }
+}
 
 export class MetabaseClient {
   private baseUrl: string;
@@ -70,7 +106,13 @@ export class MetabaseClient {
         throw new MetabaseError(response.status, body);
       }
 
-      return response.json() as Promise<T>;
+      // DELETE answers 204 No Content; parsing an empty body as JSON would throw after the
+      // operation had already succeeded.
+      if (response.status === 204) {
+        return undefined as T;
+      }
+      const text = await response.text();
+      return (text ? JSON.parse(text) : undefined) as T;
     } catch (error) {
       if (error instanceof MetabaseError) {
         throw error;
@@ -189,6 +231,44 @@ export class MetabaseClient {
   /**
    * Get card by ID
    */
+  /**
+   * /api/card/:id/query takes parameters as [{ id, type, target, value }], where id is the
+   * template tag's id; a { name: value } object is rejected with a 400. Map the tool's
+   * { name: value } input onto the card's template tags (matched by name or display name).
+   */
+  private async buildCardParameters(
+    cardId: number,
+    values: Record<string, unknown>,
+  ): Promise<Array<Record<string, unknown>>> {
+    const tags = templateTags(await this.request<Card>(`/card/${cardId}`));
+    const byKey = new Map<string, TemplateTag>();
+    for (const tag of tags) {
+      if (tag['display-name']) byKey.set(tag['display-name'].toLowerCase(), tag);
+      byKey.set(tag.name.toLowerCase(), tag);
+    }
+
+    return Object.entries(values).map(([key, value]) => {
+      const tag = byKey.get(key.toLowerCase());
+      if (!tag) {
+        // Tool responses carry only the message, so the valid names go in the message itself.
+        const suggestion = tags.length > 0
+          ? `Valid parameters: ${tags.map((t) => t.name).join(', ')}`
+          : 'This card takes no parameters; call it without parameters';
+        throw new UserFriendlyError(
+          `Card ${cardId} has no parameter "${key}". ${suggestion}`,
+          suggestion,
+          'UNKNOWN_PARAMETER',
+        );
+      }
+      return {
+        ...(tag.id ? { id: tag.id } : {}),
+        type: parameterType(tag),
+        target: [tag.type === 'dimension' ? 'dimension' : 'variable', ['template-tag', tag.name]],
+        value,
+      };
+    });
+  }
+
   async getCard(id: number): Promise<Card> {
     return this.scrub(await this.request<Card>(`/card/${id}`));
   }
@@ -197,7 +277,9 @@ export class MetabaseClient {
    * Execute a card (run the query)
    */
   async executeCard(id: number, parameters?: Record<string, unknown>): Promise<QueryResult> {
-    const body = parameters ? { parameters } : {};
+    const body = parameters && Object.keys(parameters).length > 0
+      ? { parameters: await this.buildCardParameters(id, parameters) }
+      : {};
     return this.redact(await this.request<QueryResult>(`/card/${id}/query`, {
       method: 'POST',
       body: JSON.stringify(body),
