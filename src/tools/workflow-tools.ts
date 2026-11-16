@@ -32,7 +32,7 @@ function buildStepSchema(writeEnabled: boolean) {
   return z.object({
     name: z.string().describe('Unique step name for referencing results (e.g. "find_dashboards")'),
     tool: z.enum(tools as [string, ...string[]]).describe('Tool to execute'),
-    args: z.record(z.unknown()).optional()
+    args: z.record(z.string(), z.unknown()).optional()
       .describe('Tool arguments. Use "$stepName.path.to.value" to reference previous step results'),
     on_error: z.enum(['abort', 'continue']).optional()
       .describe('Error handling: "abort" stops the workflow (default), "continue" skips to next step'),

@@ -31,7 +31,7 @@ const readOperationSchemas = [
     tool: z.literal('execute_card'),
     args: z.object({
       card_id: z.number(),
-      parameters: z.record(z.unknown()).optional(),
+      parameters: z.record(z.string(), z.unknown()).optional(),
       limit: z.number().min(1).max(10000).optional(),
     }),
   }),
@@ -81,7 +81,7 @@ function buildOperationSchema(writeEnabled: boolean) {
     : readOperationSchemas;
   return z.discriminatedUnion(
     'tool',
-    schemas as unknown as [z.ZodDiscriminatedUnionOption<'tool'>, ...z.ZodDiscriminatedUnionOption<'tool'>[]]
+    schemas as unknown as Parameters<typeof z.discriminatedUnion>[1]
   );
 }
 

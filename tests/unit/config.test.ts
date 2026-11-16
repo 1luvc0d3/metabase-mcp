@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { loadConfig, validateConfig, Logger, type LogLevel } from '../../src/config.js';
+import { AppConfigSchema, loadConfig, validateConfig, Logger, type LogLevel } from '../../src/config.js';
 import { ConfigurationError } from '../../src/utils/errors.js';
 import { silenceConsole, restoreConsole } from '../setup.js';
 
@@ -1102,5 +1102,43 @@ describe('Logger', () => {
         });
       });
     });
+  });
+});
+
+// ============================================================================
+// Schema defaults for omitted nested objects
+// ============================================================================
+
+describe('AppConfigSchema nested defaults', () => {
+  // zod 4 changed .default({}) on objects to return {} as-is without applying the inner
+  // fields' defaults; these must use .prefault({}). loadConfig() always passes every nested
+  // object, so only a direct parse with them omitted catches a regression.
+  const parsed = AppConfigSchema.parse({
+    metabase: { url: 'https://metabase.example.com' },
+    llm: {},
+    security: {},
+    logging: {},
+  });
+
+  it('applies rate limit defaults when rateLimit is omitted', () => {
+    expect(parsed.security.rateLimit).toEqual({
+      requestsPerMinute: 60,
+      readPerMinute: 120,
+      writePerMinute: 30,
+      llmPerMinute: 20,
+    });
+  });
+
+  it('applies redaction defaults when redaction is omitted', () => {
+    expect(parsed.redaction).toEqual({ columns: [], mode: 'mask' });
+  });
+
+  it('applies HTTP transport defaults when http is omitted', () => {
+    expect(parsed.http.port).toBe(3000);
+    expect(parsed.http.host).toBe('127.0.0.1');
+  });
+
+  it('defaults tool access to no allow/deny lists', () => {
+    expect(parsed.tools).toEqual({});
   });
 });
