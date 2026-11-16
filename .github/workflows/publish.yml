@@ -38,12 +38,17 @@ jobs:
 
       # PRs opened with GITHUB_TOKEN don't trigger pull_request workflows, so the release PR
       # would never get its required checks. workflow_dispatch is exempt from that rule.
+      # `pr` is only set when a release PR was created or updated, but step env is evaluated
+      # even when `if` is false, so don't call fromJSON() on it here; parse it in the shell.
       - name: Run CI on the release PR
-        if: steps.rp.outputs.pr
+        if: steps.rp.outputs.prs_created == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-          BRANCH: ${{ fromJSON(steps.rp.outputs.pr).headBranchName }}
-        run: gh workflow run ci.yml --repo "$GITHUB_REPOSITORY" --ref "$BRANCH"
+          PR_JSON: ${{ steps.rp.outputs.pr }}
+        run: |
+          BRANCH=$(jq -r '.headBranchName' <<< "$PR_JSON")
+          echo "Dispatching CI on $BRANCH"
+          gh workflow run ci.yml --repo "$GITHUB_REPOSITORY" --ref "$BRANCH"
 
   publish:
     needs: release-please
