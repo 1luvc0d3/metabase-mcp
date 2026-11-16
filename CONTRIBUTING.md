@@ -73,7 +73,9 @@ tests/
 2. Make your changes
 3. Ensure tests pass: `npm test`
 4. Ensure types check: `npm run type-check`
-5. Submit a pull request
+5. Submit a pull request with a [Conventional Commits](https://www.conventionalcommits.org/) title, e.g. `feat: add session token auth` or `fix(client): handle redirects`
+
+PRs are squash-merged, so only the PR title needs to follow the format; your individual commit messages can be anything. The title decides the release: `feat:` is a minor release, `fix:` a patch, and `docs:`, `test:`, `chore:` and similar don't trigger one. Don't bump the version yourself; releases are automated.
 
 ## Branch Naming
 

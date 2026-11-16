@@ -7,6 +7,7 @@ import type { AppConfig } from '../client/types.js';
 import type { ToolContext } from '../tools/types.js';
 import type { Logger } from '../config.js';
 import { registerTools } from '../tools/index.js';
+import { VERSION } from '../version.js';
 
 interface SessionEntry {
   transport: StreamableHTTPServerTransport;
@@ -73,7 +74,7 @@ export async function startHttpTransport(
       // New session -- create per-session McpServer
       const sessionServer = new McpServer({
         name: 'metabase-mcp',
-        version: '1.0.0',
+        version: VERSION,
       });
 
       await registerTools(sessionServer, toolContext);

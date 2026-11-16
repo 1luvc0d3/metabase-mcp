@@ -18,6 +18,7 @@ import { registerTools } from './tools/index.js';
 import { startStdioTransport } from './transport/stdio-transport.js';
 import { startHttpTransport } from './transport/http-transport.js';
 import type { ToolContext } from './tools/types.js';
+import { VERSION } from './version.js';
 
 async function main() {
   // Load and validate configuration
@@ -33,7 +34,7 @@ async function main() {
   // Initialize MCP server
   const server = new McpServer({
     name: 'metabase-mcp',
-    version: '1.5.0',
+    version: VERSION,
   });
 
   // Initialize core services
