@@ -143,7 +143,7 @@ export function registerReadTools(server: McpServer, ctx: ToolContext): void {
     'Execute an existing question/card and get results',
     {
       card_id: z.number().describe('Card ID to execute'),
-      parameters: z.record(z.unknown()).optional().describe('Optional parameters for parameterized queries'),
+      parameters: z.record(z.string(), z.unknown()).optional().describe('Optional parameters for parameterized queries'),
       fields: z.array(z.string()).optional().describe('Column names to include in results (default: all)'),
       format: z.enum(['default', 'compact']).optional().describe('Response format (default: compact). Use "default" for pretty-printed output'),
       limit: z.number().min(1).max(10000).optional().describe('Max rows to return (default: server maxRows setting)'),
