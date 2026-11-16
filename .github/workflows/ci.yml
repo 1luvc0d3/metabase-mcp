@@ -7,7 +7,7 @@ on:
     branches: [main]
     # "edited" re-runs the PR title check when the title changes
     types: [opened, synchronize, reopened, edited]
-  # Lets the release workflow run CI on release-please's PR (see publish.yml)
+  # Manual re-runs (e.g. if GitHub drops a push event)
   workflow_dispatch:
 
 permissions:
