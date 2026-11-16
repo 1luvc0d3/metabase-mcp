@@ -220,3 +220,45 @@ describe('MetabaseClient authentication headers', () => {
     expect(headers['X-Metabase-Session']).toBeUndefined();
   });
 });
+
+describe('MetabaseClient empty responses', () => {
+  // Metabase answers DELETE with 204 No Content. response.json() throws on an empty body,
+  // which made delete_card/delete_dashboard report an error after a successful delete.
+  const noContent = (): Response =>
+    ({
+      ok: true,
+      status: 204,
+      text: async () => '',
+      json: async () => {
+        throw new SyntaxError('Unexpected end of JSON input');
+      },
+    }) as unknown as Response;
+
+  let fetchMock: ReturnType<typeof vi.fn>;
+  let client: MetabaseClient;
+
+  beforeEach(() => {
+    fetchMock = vi.fn().mockResolvedValue(noContent());
+    vi.stubGlobal('fetch', fetchMock);
+    client = new MetabaseClient({ url: 'https://mb.test', apiKey: 'key', timeout: 30000, maxRows: 1000 });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('deleteCard resolves on 204 No Content', async () => {
+    await expect(client.deleteCard(7)).resolves.toBeUndefined();
+    expect(fetchMock.mock.calls[0][0]).toBe('https://mb.test/api/card/7');
+    expect(fetchMock.mock.calls[0][1].method).toBe('DELETE');
+  });
+
+  it('deleteDashboard resolves on 204 No Content', async () => {
+    await expect(client.deleteDashboard(3)).resolves.toBeUndefined();
+  });
+
+  it('treats a 200 with an empty body as no content', async () => {
+    fetchMock.mockResolvedValueOnce({ ...noContent(), status: 200 });
+    await expect(client.deleteCard(7)).resolves.toBeUndefined();
+  });
+});

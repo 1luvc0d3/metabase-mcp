@@ -70,7 +70,13 @@ export class MetabaseClient {
         throw new MetabaseError(response.status, body);
       }
 
-      return response.json() as Promise<T>;
+      // DELETE answers 204 No Content; parsing an empty body as JSON would throw after the
+      // operation had already succeeded.
+      if (response.status === 204) {
+        return undefined as T;
+      }
+      const text = await response.text();
+      return (text ? JSON.parse(text) : undefined) as T;
     } catch (error) {
       if (error instanceof MetabaseError) {
         throw error;
