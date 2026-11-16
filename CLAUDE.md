@@ -200,8 +200,23 @@ if (!validation.valid) {
 - `refactor/` - Code refactoring
 - `test/` - Test additions or updates
 
-### Commit Messages
+### Commit Messages and PR Titles
 
-- Use clear, descriptive commit messages
-- Start with a verb (Add, Fix, Update, Remove, Refactor)
-- Reference issue numbers when applicable
+This repo uses [Conventional Commits](https://www.conventionalcommits.org/). PRs are **squash-merged**, so the **PR title** becomes the commit on `main`, and release-please reads those titles to pick the next version and write `CHANGELOG.md`. CI fails a PR whose title doesn't follow the format.
+
+| Type | Use for | Release |
+|------|---------|---------|
+| `feat:` | New user-facing capability | minor |
+| `fix:` | Bug fix | patch |
+| `perf:` | Performance improvement | patch |
+| `feat!:` / `fix!:` | Breaking change (or a `BREAKING CHANGE:` footer) | major |
+| `docs:` `test:` `refactor:` `build:` `ci:` `chore:` `deps:` | Everything else | none |
+
+- Optional scope: `fix(client): ...`, `feat(security): ...`
+- Lowercase description in the imperative: `feat: add session token auth`
+- Reference issues in the PR body (`Closes #45`)
+- Use the same format for individual commits on a branch
+
+### Releases
+
+Don't bump versions by hand. On every push to `main`, release-please keeps a `chore(main): release X.Y.Z` PR open. It bumps `package.json`, `package-lock.json`, `src/version.ts`, `server.json` and `mcpb/manifest.json`, and `tests/unit/version.test.ts` fails if they drift. Merging that PR tags the release, and `.github/workflows/publish.yml` publishes to npm, attaches the `.mcpb` bundle to the GitHub release, and publishes to the official MCP registry.
