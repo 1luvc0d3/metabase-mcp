@@ -102,7 +102,8 @@ Set environment variables or create a `.env` file (see `.env.example`):
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `METABASE_URL` | Yes | - | Your Metabase instance URL |
-| `METABASE_API_KEY` | Yes | - | Metabase API key |
+| `METABASE_API_KEY` | Yes* | - | Metabase API key (recommended) |
+| `METABASE_SESSION_TOKEN` | Yes* | - | Metabase session token, sent as `X-Metabase-Session`. Use when you can't create an API key. Sessions expire (14 days by default), so prefer an API key for long-running setups |
 | `MCP_MODE` | No | `read` | Server mode: `read`, `write`, or `full` |
 | `ANTHROPIC_API_KEY` | No | - | Enables NLQ and insight tools |
 | `METABASE_TIMEOUT` | No | `30000` | Request timeout (ms) |
@@ -116,6 +117,8 @@ Set environment variables or create a `.env` file (see `.env.example`):
 | `RATE_LIMIT_WRITE_PER_MINUTE` | No | `30` | Write-tier rate limit |
 | `RATE_LIMIT_LLM_PER_MINUTE` | No | `20` | LLM-tier rate limit |
 | `RATE_LIMIT_REQUESTS_PER_MINUTE` | No | - | Legacy: sets the read tier when `RATE_LIMIT_READ_PER_MINUTE` is unset |
+
+\* Set one of `METABASE_API_KEY` or `METABASE_SESSION_TOKEN`. If both are set, the API key is used.
 
 ### Per-tool access control
 

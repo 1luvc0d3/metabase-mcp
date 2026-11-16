@@ -652,6 +652,45 @@ describe('validateConfig()', () => {
       expect(result.errors).toContain('Invalid Metabase API key');
     });
 
+    it('sends the session token header when only METABASE_SESSION_TOKEN is set', async () => {
+      vi.mocked(fetch).mockResolvedValueOnce({ ok: true, status: 200 } as Response);
+
+      const config = createTestConfig({
+        metabase: { url: 'https://metabase.example.com', sessionToken: 'sess-123', timeout: 30000, maxRows: 10000 },
+      });
+      await validateConfig(config);
+
+      expect(fetch).toHaveBeenCalledWith(
+        'https://metabase.example.com/api/health',
+        expect.objectContaining({ headers: { 'X-Metabase-Session': 'sess-123' } })
+      );
+    });
+
+    it('reports an invalid or expired session token on 401 when authenticating by session', async () => {
+      vi.mocked(fetch).mockResolvedValueOnce({ ok: false, status: 401 } as Response);
+
+      const config = createTestConfig({
+        metabase: { url: 'https://metabase.example.com', sessionToken: 'expired', timeout: 30000, maxRows: 10000 },
+      });
+      const result = await validateConfig(config);
+
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContain('Invalid or expired Metabase session token');
+    });
+
+    it('names both credential variables on 401 when neither is set', async () => {
+      vi.mocked(fetch).mockResolvedValueOnce({ ok: false, status: 401 } as Response);
+
+      const config = createTestConfig({
+        metabase: { url: 'https://metabase.example.com', timeout: 30000, maxRows: 10000 },
+      });
+      const result = await validateConfig(config);
+
+      expect(result.errors).toContain(
+        'Metabase rejected the request: set METABASE_API_KEY or METABASE_SESSION_TOKEN'
+      );
+    });
+
     it('returns error when Metabase returns non-OK status', async () => {
       vi.mocked(fetch).mockResolvedValueOnce({
         ok: false,
