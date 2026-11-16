@@ -262,3 +262,105 @@ describe('MetabaseClient empty responses', () => {
     await expect(client.deleteCard(7)).resolves.toBeUndefined();
   });
 });
+
+describe('MetabaseClient.executeCard parameters', () => {
+  // /api/card/:id/query takes parameters as [{ id, type, target, value }] where id is the
+  // template tag's id; a { name: value } object is rejected with a 400. The tool accepts
+  // { name: value } and the client maps it onto the card's template tags.
+  let fetchMock: ReturnType<typeof vi.fn>;
+  let client: MetabaseClient;
+  const queryResult = { data: { rows: [[1]], cols: [{ name: 'n' }] }, row_count: 1, status: 'completed' };
+
+  // Metabase >= v0.6x stores queries as stages with a template-tags list.
+  const stagesCard = {
+    id: 46,
+    dataset_query: {
+      'lib/type': 'mbql/query',
+      database: 1,
+      stages: [{
+        'template-tags': [
+          { id: 'id-n', name: 'n', 'display-name': 'N', type: 'number' },
+          { id: 'id-t', name: 't', 'display-name': 'Title', type: 'text' },
+          { id: 'id-d', name: 'created', 'display-name': 'Created', type: 'date' },
+          { id: 'id-f', name: 'state', 'display-name': 'State', type: 'dimension', 'widget-type': 'string/=' },
+        ],
+      }],
+    },
+  };
+  // Older versions keep a native query with a template-tags map.
+  const legacyCard = {
+    id: 9,
+    dataset_query: {
+      type: 'native',
+      database: 1,
+      native: { query: 'SELECT {{n}}', 'template-tags': { n: { id: 'id-n', name: 'n', 'display-name': 'N', type: 'number' } } },
+    },
+  };
+
+  const sentBody = (callIndex: number) => JSON.parse(fetchMock.mock.calls[callIndex][1].body);
+
+  beforeEach(() => {
+    fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    client = new MetabaseClient({ url: 'https://mb.test', apiKey: 'key', timeout: 30000, maxRows: 1000 });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('maps { name: value } onto template tags for stage-based queries', async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse(stagesCard)).mockResolvedValueOnce(jsonResponse(queryResult));
+
+    await client.executeCard(46, { n: 5, t: 'hi', created: '2026-01-01', state: 'CA' });
+
+    expect(fetchMock.mock.calls[0][0]).toBe('https://mb.test/api/card/46');
+    expect(fetchMock.mock.calls[1][0]).toBe('https://mb.test/api/card/46/query');
+    expect(sentBody(1).parameters).toEqual([
+      { id: 'id-n', type: 'number/=', target: ['variable', ['template-tag', 'n']], value: 5 },
+      { id: 'id-t', type: 'category', target: ['variable', ['template-tag', 't']], value: 'hi' },
+      { id: 'id-d', type: 'date/single', target: ['variable', ['template-tag', 'created']], value: '2026-01-01' },
+      { id: 'id-f', type: 'string/=', target: ['dimension', ['template-tag', 'state']], value: 'CA' },
+    ]);
+  });
+
+  it('maps parameters for legacy native queries with a template-tags map', async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse(legacyCard)).mockResolvedValueOnce(jsonResponse(queryResult));
+
+    await client.executeCard(9, { n: 3 });
+
+    expect(sentBody(1).parameters).toEqual([
+      { id: 'id-n', type: 'number/=', target: ['variable', ['template-tag', 'n']], value: 3 },
+    ]);
+  });
+
+  it('matches parameter names case-insensitively and by display name', async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse(stagesCard)).mockResolvedValueOnce(jsonResponse(queryResult));
+
+    await client.executeCard(46, { N: 1, title: 'x' });
+
+    expect(sentBody(1).parameters.map((p: { id: string }) => p.id)).toEqual(['id-n', 'id-t']);
+  });
+
+  it('rejects an unknown parameter with the valid names and does not run the query', async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse(stagesCard));
+
+    await expect(client.executeCard(46, { nope: 1 })).rejects.toMatchObject({
+      code: 'UNKNOWN_PARAMETER',
+      // Tool responses carry only the message, so it must name the valid parameters.
+      message: 'Card 46 has no parameter "nope". Valid parameters: n, t, created, state',
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('sends no parameters and skips the card lookup when none are given', async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse(queryResult)).mockResolvedValueOnce(jsonResponse(queryResult));
+
+    await client.executeCard(46);
+    await client.executeCard(46, {});
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(sentBody(0)).toEqual({});
+    expect(sentBody(1)).toEqual({});
+  });
+});
