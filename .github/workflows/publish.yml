@@ -22,33 +22,23 @@ jobs:
   release-please:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
-      pull-requests: write
-      actions: write
+      contents: read
     outputs:
       release_created: ${{ steps.rp.outputs.release_created }}
       tag_name: ${{ steps.rp.outputs.tag_name }}
       version: ${{ steps.rp.outputs.version }}
     steps:
+      # Uses a fine-grained PAT (Contents + Pull requests: read & write, this repo only), not
+      # GITHUB_TOKEN: PRs and pushes made with GITHUB_TOKEN don't trigger pull_request
+      # workflows, so the release PR would never get its required checks. Running CI via
+      # workflow_dispatch doesn't help either, because GitHub doesn't count those checks for
+      # the PR. If the token expires, release-please fails here: rotate RELEASE_PLEASE_TOKEN.
       - id: rp
         uses: googleapis/release-please-action@v5
         with:
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
-
-      # PRs opened with GITHUB_TOKEN don't trigger pull_request workflows, so the release PR
-      # would never get its required checks. workflow_dispatch is exempt from that rule.
-      # `pr` is only set when a release PR was created or updated, but step env is evaluated
-      # even when `if` is false, so don't call fromJSON() on it here; parse it in the shell.
-      - name: Run CI on the release PR
-        if: steps.rp.outputs.prs_created == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          PR_JSON: ${{ steps.rp.outputs.pr }}
-        run: |
-          BRANCH=$(jq -r '.headBranchName' <<< "$PR_JSON")
-          echo "Dispatching CI on $BRANCH"
-          gh workflow run ci.yml --repo "$GITHUB_REPOSITORY" --ref "$BRANCH"
 
   publish:
     needs: release-please
