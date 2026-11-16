@@ -180,3 +180,43 @@ describe('MetabaseClient column redaction', () => {
     expect(result.data.rows).toEqual([[1, 'a@example.com']]);
   });
 });
+
+describe('MetabaseClient authentication headers', () => {
+  let fetchMock: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    fetchMock = vi.fn().mockResolvedValue(jsonResponse([]));
+    vi.stubGlobal('fetch', fetchMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const headersSent = async (auth: { apiKey?: string; sessionToken?: string }) => {
+    const client = new MetabaseClient({ url: 'https://mb.test', timeout: 30000, maxRows: 1000, ...auth });
+    await client.getDatabases();
+    return fetchMock.mock.calls[0][1].headers as Record<string, string>;
+  };
+
+  it('sends X-API-Key when an API key is configured', async () => {
+    const headers = await headersSent({ apiKey: 'key' });
+
+    expect(headers['X-API-Key']).toBe('key');
+    expect(headers['X-Metabase-Session']).toBeUndefined();
+  });
+
+  it('sends X-Metabase-Session when only a session token is configured', async () => {
+    const headers = await headersSent({ sessionToken: 'sess-123' });
+
+    expect(headers['X-Metabase-Session']).toBe('sess-123');
+    expect(headers['X-API-Key']).toBeUndefined();
+  });
+
+  it('prefers the API key when both are configured', async () => {
+    const headers = await headersSent({ apiKey: 'key', sessionToken: 'sess-123' });
+
+    expect(headers['X-API-Key']).toBe('key');
+    expect(headers['X-Metabase-Session']).toBeUndefined();
+  });
+});

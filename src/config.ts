@@ -216,7 +216,13 @@ export async function validateConfig(config: AppConfig): Promise<{
 
     if (!response.ok) {
       if (response.status === 401) {
-        errors.push('Invalid Metabase API key');
+        if (config.metabase.apiKey) {
+          errors.push('Invalid Metabase API key');
+        } else if (config.metabase.sessionToken) {
+          errors.push('Invalid or expired Metabase session token');
+        } else {
+          errors.push('Metabase rejected the request: set METABASE_API_KEY or METABASE_SESSION_TOKEN');
+        }
       } else {
         errors.push(`Metabase returned status ${response.status}`);
       }
