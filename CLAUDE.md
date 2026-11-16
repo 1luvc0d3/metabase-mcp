@@ -143,12 +143,11 @@ Run it locally against a throwaway container:
 ```bash
 docker run -d --name mb-e2e -p 3000:3000 metabase/metabase:latest
 npm run build
-eval "$(METABASE_URL=http://localhost:3000 node tests/e2e/setup-metabase.mjs | sed 's/^/export /')"
-METABASE_URL=http://localhost:3000 METABASE_API_KEY="$api_key" E2E_PARAM_CARD_ID="$param_card_id" npm run test:e2e
+METABASE_URL=http://localhost:3000 npm run test:e2e
 docker rm -f mb-e2e
 ```
 
-Against an instance that's already set up, pass `E2E_ADMIN_EMAIL` and `E2E_ADMIN_PASSWORD` to the setup script. It creates one fixture card per run; the smoke test deletes everything else it creates.
+On a fresh instance the test runs the setup wizard itself (`tests/e2e/metabase-setup.mjs`); against one that's already set up, also pass `E2E_ADMIN_EMAIL` and `E2E_ADMIN_PASSWORD`. The API key it creates is kept in memory and never printed. Each run leaves one fixture card behind; everything else it creates is deleted.
 
 ## Key Patterns
 

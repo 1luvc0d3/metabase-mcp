@@ -1,21 +1,17 @@
-#!/usr/bin/env node
-// Prepares a Metabase instance for the end-to-end smoke test (tests/e2e/smoke.mjs).
+// Prepares a Metabase instance for the end-to-end smoke test (tests/e2e/smoke.mjs imports it).
 //
 // Fresh instance (e.g. a new Docker container): completes the setup wizard with a throwaway
 // admin. Existing instance: logs in with E2E_ADMIN_EMAIL / E2E_ADMIN_PASSWORD.
-// Then creates an admin API key and a native "fixture" card with SQL variables, and prints
-// shell-style KEY=value lines (also appended to $GITHUB_OUTPUT when set):
-//   api_key=...        Metabase API key for the MCP server
-//   param_card_id=...  card with {{category}} (text) and {{min_price}} (number) variables
+// Then creates an admin API key and a native "fixture" card with SQL variables
+// ({{category}} text, {{min_price}} number).
 //
-// Usage: METABASE_URL=http://localhost:3000 node tests/e2e/setup-metabase.mjs
-// Needs Node >= 20 (global fetch). Works against Metabase v0.50+ (API keys need v0.49+).
+// The API key is returned in memory and never printed or written to disk.
+// Works against Metabase v0.50+ (API keys need v0.49+). Needs Node >= 20 (global fetch).
 
-import { appendFileSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 
-const base = (process.env.METABASE_URL || 'http://localhost:3000').replace(/\/$/, '');
 const healthTimeoutMs = Number(process.env.E2E_HEALTH_TIMEOUT_MS || 600_000);
+let base;
 
 async function api(path, { method = 'GET', session, body } = {}) {
   const res = await fetch(`${base}/api${path}`, {
@@ -88,7 +84,12 @@ async function sampleDatabaseId(session) {
   throw new Error('Sample Database not found');
 }
 
-async function main() {
+/**
+ * @param {string} metabaseUrl
+ * @returns {Promise<{ apiKey: string, paramCardId: number, databaseId: number, version: string }>}
+ */
+export async function prepareMetabase(metabaseUrl) {
+  base = metabaseUrl.replace(/\/$/, '');
   await waitForHealth();
   const { session, version } = await getSession();
 
@@ -121,14 +122,5 @@ async function main() {
     },
   });
 
-  const out = { metabase_version: version, api_key: key.unmasked_key, param_card_id: card.id, database_id: databaseId };
-  const lines = Object.entries(out).map(([k, v]) => `${k}=${v}`).join('\n');
-  if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, `${lines}\n`);
-  if (process.env.GITHUB_ACTIONS) console.log(`::add-mask::${out.api_key}`);
-  console.log(lines);
+  return { apiKey: key.unmasked_key, paramCardId: card.id, databaseId, version };
 }
-
-main().catch((e) => {
-  console.error(e.message);
-  process.exit(1);
-});

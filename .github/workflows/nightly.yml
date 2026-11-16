@@ -46,18 +46,11 @@ jobs:
       - name: Start Metabase ${{ matrix.metabase }}
         run: docker run -d --name metabase -p 3000:3000 "metabase/metabase:${{ matrix.metabase }}"
 
-      - name: Set up Metabase (admin, API key, fixture card)
-        id: setup
-        env:
-          METABASE_URL: http://localhost:3000
-        run: node tests/e2e/setup-metabase.mjs
-
+      # Runs the setup wizard, creates an API key (kept in memory) and a fixture card, then the
+      # checks. The job summary shows a table per Metabase version.
       - name: Smoke test
         env:
           METABASE_URL: http://localhost:3000
-          METABASE_API_KEY: ${{ steps.setup.outputs.api_key }}
-          E2E_PARAM_CARD_ID: ${{ steps.setup.outputs.param_card_id }}
-          E2E_LABEL: Metabase ${{ steps.setup.outputs.metabase_version }} (${{ matrix.metabase }})
         run: node tests/e2e/smoke.mjs
 
       - name: Metabase logs

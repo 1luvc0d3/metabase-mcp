@@ -3,26 +3,31 @@
 // real MCP client, and exercises the tools against a live Metabase. Catches what the mocked
 // unit/integration tests can't: real request and response shapes for each Metabase version.
 //
-// Usage (after `npm run build` and tests/e2e/setup-metabase.mjs):
-//   METABASE_URL=http://localhost:3000 METABASE_API_KEY=mb_... E2E_PARAM_CARD_ID=123 \
-//     node tests/e2e/smoke.mjs
+// Usage (after `npm run build`):
+//   METABASE_URL=http://localhost:3000 npm run test:e2e
+// On a fresh instance it runs the setup wizard itself (tests/e2e/metabase-setup.mjs); on one
+// that's already set up, also pass E2E_ADMIN_EMAIL and E2E_ADMIN_PASSWORD. The API key it
+// creates stays in memory. To reuse your own key instead, pass METABASE_API_KEY and
+// E2E_PARAM_CARD_ID (a native card with {{category}} text and {{min_price}} number variables).
 // Optional: SERVER_ENTRY=path/to/dist/index.js to test another build (e.g. a published package).
 //
-// Every object it creates is deleted again. Exits non-zero if any check fails.
+// Every object the checks create is deleted again. Exits non-zero if any check fails.
 
 import { appendFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { prepareMetabase } from './metabase-setup.mjs';
 
 const repo = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
-const { METABASE_URL, METABASE_API_KEY, E2E_PARAM_CARD_ID } = process.env;
-if (!METABASE_URL || !METABASE_API_KEY || !E2E_PARAM_CARD_ID) {
-  console.error('Set METABASE_URL, METABASE_API_KEY and E2E_PARAM_CARD_ID (see tests/e2e/setup-metabase.mjs)');
+const METABASE_URL = process.env.METABASE_URL;
+if (!METABASE_URL) {
+  console.error('Set METABASE_URL (see the usage notes at the top of this file)');
   process.exit(2);
 }
-const paramCardId = Number(E2E_PARAM_CARD_ID);
+let METABASE_API_KEY = process.env.METABASE_API_KEY;
+let paramCardId = Number(process.env.E2E_PARAM_CARD_ID);
 const runId = Date.now();
 const results = [];
 
@@ -69,6 +74,11 @@ async function check(label, fn) {
   }
 }
 
+/** Make text safe for a single markdown table cell: escape backslashes first, then pipes. */
+function markdownCell(text) {
+  return String(text).slice(0, 200).replace(/\\/g, '\\\\').replace(/\|/g, '\\|').replace(/[\r\n]+/g, ' ');
+}
+
 function expect(cond, message) {
   if (!cond) throw new Error(message);
 }
@@ -76,6 +86,13 @@ function expect(cond, message) {
 const idOf = (r) => r.json?.id ?? Number((r.text.match(/"id":\s*(\d+)/) || [])[1]);
 
 async function main() {
+  if (!METABASE_API_KEY || !paramCardId) {
+    const prepared = await prepareMetabase(METABASE_URL);
+    METABASE_API_KEY = prepared.apiKey;
+    paramCardId = prepared.paramCardId;
+    console.log(`Prepared Metabase ${prepared.version}: fixture card ${paramCardId}`);
+    process.env.E2E_LABEL ??= `Metabase ${prepared.version}`;
+  }
   const client = await connect();
   let databaseId;
   let cardId;
@@ -234,7 +251,7 @@ async function main() {
   const summary = `${results.length - failed.length}/${results.length} checks passed`;
   console.log(`\n${summary}`);
   if (process.env.GITHUB_STEP_SUMMARY) {
-    const rows = results.map((r) => `| ${r.ok ? '✅' : '❌'} | ${r.label} | ${r.ok ? '' : (r.error ?? '').replace(/\|/g, '\\|').slice(0, 200)} |`);
+    const rows = results.map((r) => `| ${r.ok ? '✅' : '❌'} | ${r.label} | ${r.ok ? '' : markdownCell(r.error ?? '')} |`);
     appendFileSync(process.env.GITHUB_STEP_SUMMARY,
       `### ${process.env.E2E_LABEL ?? 'E2E smoke'}: ${summary}\n\n| | Check | Error |\n|---|---|---|\n${rows.join('\n')}\n\n`);
   }
