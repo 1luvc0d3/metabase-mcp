@@ -2,7 +2,7 @@
   "manifest_version": "0.4",
   "name": "metabase-mcp",
   "display_name": "Metabase",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "description": "Query and manage Metabase dashboards, cards, and data via Claude",
   "long_description": "Production-grade MCP server for Metabase with SQL injection guardrails, tiered rate limiting, per-tool access control, and audit logging. Features 30 tools for reading, writing, batch execution, workflow pipelines, natural-language-to-SQL generation, and AI-powered insights.",
   "author": {
@@ -32,7 +32,9 @@
     "entry_point": "dist/index.js",
     "mcp_config": {
       "command": "node",
-      "args": ["${__dirname}/dist/index.js"],
+      "args": [
+        "${__dirname}/dist/index.js"
+      ],
       "env": {
         "METABASE_URL": "${user_config.metabase_url}",
         "METABASE_API_KEY": "${user_config.metabase_api_key}",
@@ -71,36 +73,126 @@
     }
   },
   "tools": [
-    { "name": "list_dashboards", "description": "List all dashboards" },
-    { "name": "get_dashboard", "description": "Get a dashboard by ID" },
-    { "name": "list_cards", "description": "List all cards (saved questions)" },
-    { "name": "get_card", "description": "Get a card by ID" },
-    { "name": "execute_card", "description": "Execute a saved card query" },
-    { "name": "list_databases", "description": "List connected databases" },
-    { "name": "get_database_schema", "description": "Get tables and columns for a database" },
-    { "name": "execute_query", "description": "Execute a SELECT SQL query against a database" },
-    { "name": "search_content", "description": "Search across Metabase content" },
-    { "name": "get_collections", "description": "List collections" },
-    { "name": "batch_execute", "description": "Execute up to 20 operations in parallel in a single call" },
-    { "name": "run_workflow", "description": "Run a multi-step pipeline with output references between steps" },
-    { "name": "create_card", "description": "Create a new card (saved question)" },
-    { "name": "update_card", "description": "Update an existing card" },
-    { "name": "delete_card", "description": "Permanently delete a card (cannot be undone)" },
-    { "name": "create_dashboard", "description": "Create a new dashboard" },
-    { "name": "update_dashboard", "description": "Update an existing dashboard" },
-    { "name": "delete_dashboard", "description": "Permanently delete a dashboard (cannot be undone)" },
-    { "name": "add_card_to_dashboard", "description": "Add a card to a dashboard" },
-    { "name": "remove_card_from_dashboard", "description": "Remove a card from a dashboard" },
-    { "name": "create_collection", "description": "Create a new collection" },
-    { "name": "move_to_collection", "description": "Move a card or dashboard to a different collection" },
-    { "name": "nlq_to_sql", "description": "Convert natural language question to SQL" },
-    { "name": "explain_sql", "description": "Explain what a SQL query does in plain English" },
-    { "name": "optimize_sql", "description": "Suggest optimizations for a SQL query" },
-    { "name": "validate_sql", "description": "Check SQL for syntax and security issues" },
-    { "name": "ask_data", "description": "Ask a question about your data in natural language" },
-    { "name": "generate_insights", "description": "Generate automated insights from query results" },
-    { "name": "compare_metrics", "description": "Compare metrics across time periods or segments" },
-    { "name": "trend_analysis", "description": "Analyze trends and temporal patterns in data" }
+    {
+      "name": "list_dashboards",
+      "description": "List all dashboards"
+    },
+    {
+      "name": "get_dashboard",
+      "description": "Get a dashboard by ID"
+    },
+    {
+      "name": "list_cards",
+      "description": "List all cards (saved questions)"
+    },
+    {
+      "name": "get_card",
+      "description": "Get a card by ID"
+    },
+    {
+      "name": "execute_card",
+      "description": "Execute a saved card query"
+    },
+    {
+      "name": "list_databases",
+      "description": "List connected databases"
+    },
+    {
+      "name": "get_database_schema",
+      "description": "Get tables and columns for a database"
+    },
+    {
+      "name": "execute_query",
+      "description": "Execute a SELECT SQL query against a database"
+    },
+    {
+      "name": "search_content",
+      "description": "Search across Metabase content"
+    },
+    {
+      "name": "get_collections",
+      "description": "List collections"
+    },
+    {
+      "name": "batch_execute",
+      "description": "Execute up to 20 operations in parallel in a single call"
+    },
+    {
+      "name": "run_workflow",
+      "description": "Run a multi-step pipeline with output references between steps"
+    },
+    {
+      "name": "create_card",
+      "description": "Create a new card (saved question)"
+    },
+    {
+      "name": "update_card",
+      "description": "Update an existing card"
+    },
+    {
+      "name": "delete_card",
+      "description": "Permanently delete a card (cannot be undone)"
+    },
+    {
+      "name": "create_dashboard",
+      "description": "Create a new dashboard"
+    },
+    {
+      "name": "update_dashboard",
+      "description": "Update an existing dashboard"
+    },
+    {
+      "name": "delete_dashboard",
+      "description": "Permanently delete a dashboard (cannot be undone)"
+    },
+    {
+      "name": "add_card_to_dashboard",
+      "description": "Add a card to a dashboard"
+    },
+    {
+      "name": "remove_card_from_dashboard",
+      "description": "Remove a card from a dashboard"
+    },
+    {
+      "name": "create_collection",
+      "description": "Create a new collection"
+    },
+    {
+      "name": "move_to_collection",
+      "description": "Move a card or dashboard to a different collection"
+    },
+    {
+      "name": "nlq_to_sql",
+      "description": "Convert natural language question to SQL"
+    },
+    {
+      "name": "explain_sql",
+      "description": "Explain what a SQL query does in plain English"
+    },
+    {
+      "name": "optimize_sql",
+      "description": "Suggest optimizations for a SQL query"
+    },
+    {
+      "name": "validate_sql",
+      "description": "Check SQL for syntax and security issues"
+    },
+    {
+      "name": "ask_data",
+      "description": "Ask a question about your data in natural language"
+    },
+    {
+      "name": "generate_insights",
+      "description": "Generate automated insights from query results"
+    },
+    {
+      "name": "compare_metrics",
+      "description": "Compare metrics across time periods or segments"
+    },
+    {
+      "name": "trend_analysis",
+      "description": "Analyze trends and temporal patterns in data"
+    }
   ],
   "privacy_policies": [
     "https://www.metabase.com/privacy",
@@ -109,7 +201,11 @@
   ],
   "compatibility": {
     "claude_desktop": ">=0.10.0",
-    "platforms": ["darwin", "win32", "linux"],
+    "platforms": [
+      "darwin",
+      "win32",
+      "linux"
+    ],
     "runtimes": {
       "node": ">=20.0.0"
     }
