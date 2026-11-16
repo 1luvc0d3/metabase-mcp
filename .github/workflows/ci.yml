@@ -5,6 +5,10 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+    # "edited" re-runs the PR title check when the title changes
+    types: [opened, synchronize, reopened, edited]
+  # Lets the release workflow run CI on release-please's PR (see publish.yml)
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -37,3 +41,21 @@ jobs:
 
       - name: Run tests
         run: npm test
+
+  # PRs are squash-merged and the PR title becomes the commit on main, which release-please
+  # reads to decide the next version. Skipped (and so passing) outside pull_request events.
+  pr-title:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check the PR title follows Conventional Commits
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          pattern='^(feat|fix|perf|refactor|docs|test|build|ci|chore|revert|deps)(\([a-z0-9._/-]+\))?!?: .+'
+          if printf '%s' "$TITLE" | grep -Eq "$pattern"; then
+            echo "OK: $TITLE"
+          else
+            echo "::error::PR title must follow Conventional Commits, e.g. 'feat: add X', 'fix(client): handle Y', 'docs: update Z'. Got: $TITLE"
+            exit 1
+          fi
