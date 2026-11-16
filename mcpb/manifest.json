@@ -2,7 +2,7 @@
   "manifest_version": "0.4",
   "name": "metabase-mcp",
   "display_name": "Metabase",
-  "version": "1.6.0",
+  "version": "1.6.1",
   "description": "Query and manage Metabase dashboards, cards, and data via Claude",
   "long_description": "Production-grade MCP server for Metabase with SQL injection guardrails, tiered rate limiting, per-tool access control, and audit logging. Features 30 tools for reading, writing, batch execution, workflow pipelines, natural-language-to-SQL generation, and AI-powered insights.",
   "author": {
