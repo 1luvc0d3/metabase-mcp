@@ -1,0 +1,44 @@
+# Dependency updates. PR titles must pass the pr-title check (Conventional Commits) and are read
+# by release-please on squash merge:
+#   fix(deps): ...       runtime dependencies  -> patch release, so users get the update
+#   chore(deps-dev): ... dev dependencies      -> no release
+#   ci(deps): ...        GitHub Actions        -> no release
+# Dev-dependency minor/patch groups auto-merge once CI passes (.github/workflows/dependabot-auto-merge.yml).
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: fix
+      prefix-development: chore
+      include: scope
+    groups:
+      runtime-minor-patch:
+        dependency-type: production
+        update-types: [minor, patch]
+      dev-minor-patch:
+        dependency-type: development
+        update-types: [minor, patch]
+      # Security updates arrive any day of the week; group them the same way.
+      runtime-security:
+        applies-to: security-updates
+        dependency-type: production
+      dev-security:
+        applies-to: security-updates
+        dependency-type: development
+    # Major versions open one PR each and always need a human (e.g. zod 3 -> 4 is a migration).
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: ci
+      include: scope
+    groups:
+      actions:
+        patterns: ['*']

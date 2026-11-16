@@ -220,3 +220,7 @@ This repo uses [Conventional Commits](https://www.conventionalcommits.org/). PRs
 ### Releases
 
 Don't bump versions by hand. On every push to `main`, release-please keeps a `chore(main): release X.Y.Z` PR open. It bumps `package.json`, `package-lock.json`, `src/version.ts`, `server.json` and `mcpb/manifest.json`, and `tests/unit/version.test.ts` fails if they drift. Merging that PR tags the release, and `.github/workflows/publish.yml` publishes to npm, attaches the `.mcpb` bundle to the GitHub release, and publishes to the official MCP registry.
+
+### Dependency Updates
+
+Dependabot (`.github/dependabot.yml`) opens grouped PRs weekly (npm) and monthly (GitHub Actions) with titles that pass the `pr-title` check: `fix(deps):` for runtime dependencies (patch release), `chore(deps-dev):` for dev dependencies, and `ci(deps):` for actions. Dev-dependency minor/patch PRs auto-merge once CI passes (`.github/workflows/dependabot-auto-merge.yml`); runtime, major and actions updates need a human. Regenerate lockfiles by hand with npm 10 (`npx npm@10 install`), since npm 11 drops optional `@emnapi/*` entries that CI's npm 10 rejects.
