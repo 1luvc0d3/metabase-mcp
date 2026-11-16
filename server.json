@@ -3,7 +3,7 @@
   "name": "io.github.1luvc0d3/metabase-mcp",
   "title": "Metabase",
   "description": "Query and manage Metabase dashboards, cards, and data via Claude",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "repository": {
     "url": "https://github.com/1luvc0d3/metabase-mcp",
     "source": "github"
@@ -12,8 +12,10 @@
     {
       "registryType": "npm",
       "identifier": "@ai-1luvc0d3/metabase-mcp",
-      "version": "1.5.0",
-      "transport": { "type": "stdio" },
+      "version": "1.6.0",
+      "transport": {
+        "type": "stdio"
+      },
       "environmentVariables": [
         {
           "name": "METABASE_URL",
@@ -54,7 +56,10 @@
           "isRequired": false,
           "format": "string",
           "default": "mask",
-          "choices": ["mask", "drop"]
+          "choices": [
+            "mask",
+            "drop"
+          ]
         }
       ]
     }
