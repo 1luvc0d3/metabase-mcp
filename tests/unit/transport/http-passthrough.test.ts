@@ -56,11 +56,15 @@ describe('HTTP transport, passthrough mode', () => {
   /** The fake client built for each credential value */
   let clientsByCredential: Map<string, ReturnType<typeof createMockMetabaseClient>>;
   const mcpClients: Client[] = [];
+  /** Every credential check that reached (fake) Metabase */
+  let verifyCalls: string[];
 
   function fakeClientFor(credential: MetabaseCredential) {
     const value = credential.apiKey ?? credential.sessionToken!;
     const client = createMockMetabaseClient() as any;
     client.getCurrentUser = vi.fn(async () => {
+      verifyCalls.push(value);
+      await new Promise(resolve => setTimeout(resolve, 10));
       if (value === 'mb_revoked') throw new MetabaseError(401, 'Unauthenticated');
       if (value === 'mb_down') throw new Error('fetch failed');
       const identity = IDENTITIES[value];
@@ -140,6 +144,7 @@ describe('HTTP transport, passthrough mode', () => {
     tmp = mkdtempSync(join(tmpdir(), 'mcp-pass-'));
     auditFile = join(tmp, 'audit.log');
     clientsByCredential = new Map();
+    verifyCalls = [];
     factory = vi.fn(fakeClientFor);
   });
 
@@ -306,5 +311,180 @@ describe('actorFor()', () => {
     expect(actorFor({ id: 1, email: 'a@b.c', common_name: 'A' })).toBe('a@b.c');
     expect(actorFor({ id: 2, email: 'api-key-user-x@api-key.invalid', common_name: 'etl' }))
       .toBe('api-key:etl');
+  });
+});
+
+describe('HTTP transport, passthrough abuse controls', () => {
+  let httpApp: HttpApp;
+  let listener: Server;
+  let baseUrl: string;
+  let verifyCalls: string[];
+  let tmp: string;
+
+  function fakeClient(credential: MetabaseCredential) {
+    const value = credential.apiKey ?? credential.sessionToken!;
+    const client = createMockMetabaseClient() as any;
+    client.getCurrentUser = vi.fn(async () => {
+      verifyCalls.push(value);
+      await new Promise(resolve => setTimeout(resolve, 10));
+      if (value.startsWith('mb_down')) throw new Error('fetch failed');
+      const identity = IDENTITIES[value];
+      if (!identity) throw new MetabaseError(401, 'Unauthenticated');
+      return identity;
+    });
+    return client;
+  }
+
+  beforeEach(async () => {
+    tmp = mkdtempSync(join(tmpdir(), 'mcp-abuse-'));
+    verifyCalls = [];
+    const testConfig = createTestConfig();
+    const root = createMockMetabaseClient();
+    const context: ToolContext = {
+      config: { mode: 'read', metabase: { maxRows: 10000 } },
+      metabaseClient: root as any,
+      llmService: null,
+      sqlGuardrails: new SQLGuardrails(testConfig.security),
+      rateLimiter: new TieredRateLimiter(),
+      auditLogger: new AuditLogger({ logFile: join(tmp, 'audit.log'), alertOnHighRisk: false }),
+      schemaManager: new SchemaManager(root as any),
+      logger: new Logger('error'),
+    };
+    httpApp = createHttpApp(
+      makeConfig({ authFailuresPerMinute: 3, trustProxy: true }),
+      context, new Logger('error'), { createMetabaseClient: fakeClient as any }
+    );
+    listener = httpApp.app.listen(0, '127.0.0.1');
+    await new Promise<void>((resolve, reject) => {
+      listener.once('listening', resolve);
+      listener.once('error', reject);
+    });
+    baseUrl = `http://127.0.0.1:${(listener.address() as AddressInfo).port}`;
+  });
+
+  afterEach(async () => {
+    await httpApp.closeAll();
+    await new Promise(resolve => listener.close(resolve));
+    rmSync(tmp, { recursive: true, force: true });
+  });
+
+  function open(apiKey: string, ip = '203.0.113.1') {
+    return fetch(`${baseUrl}/mcp`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json, text/event-stream',
+        'X-API-Key': apiKey,
+        'X-Forwarded-For': ip,
+      },
+      body: JSON.stringify({
+        jsonrpc: '2.0', id: 1, method: 'initialize',
+        params: { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 't', version: '1' } },
+      }),
+    });
+  }
+
+  it('answers a retried bad key from memory: one Metabase call, no lockout', async () => {
+    for (let i = 0; i < 20; i++) {
+      expect((await open('mb_bad')).status).toBe(401);
+    }
+    expect(verifyCalls).toEqual(['mb_bad']);
+    // One counted failure, so a good key from the same IP still works
+    expect((await open('mb_alice')).status).toBe(200);
+  });
+
+  it('shares one Metabase call between concurrent checks of the same key', async () => {
+    const results = await Promise.all(Array.from({ length: 20 }, () => open('mb_bad')));
+    expect(results.every(r => r.status === 401)).toBe(true);
+    expect(verifyCalls).toEqual(['mb_bad']);
+  });
+
+  it('throttles an IP that keeps presenting fresh bad keys, without asking Metabase', async () => {
+    for (const key of ['mb_bad1', 'mb_bad2', 'mb_bad3']) {
+      expect((await open(key)).status).toBe(401);
+    }
+    const throttled = await open('mb_bad4');
+    expect(throttled.status).toBe(429);
+    expect(Number(throttled.headers.get('retry-after'))).toBeGreaterThan(0);
+    expect(verifyCalls).not.toContain('mb_bad4');
+
+    // An unknown good key from the throttled IP is throttled too (the residual limitation)
+    expect((await open('mb_bob')).status).toBe(429);
+  });
+
+  it('keeps the budget per client IP', async () => {
+    for (const key of ['mb_bad1', 'mb_bad2', 'mb_bad3']) await open(key, '203.0.113.1');
+    expect((await open('mb_bad4', '203.0.113.1')).status).toBe(429);
+    expect((await open('mb_bad4', '198.51.100.7')).status).toBe(401);
+  });
+
+  it('lets a recently verified credential through a throttled IP', async () => {
+    expect((await open('mb_alice')).status).toBe(200);
+    for (const key of ['mb_bad1', 'mb_bad2', 'mb_bad3']) await open(key);
+    expect((await open('mb_bad4')).status).toBe(429);
+
+    // Alice still opens new sessions, and Metabase is still asked (revocation still works)
+    const before = verifyCalls.filter(v => v === 'mb_alice').length;
+    expect((await open('mb_alice')).status).toBe(200);
+    expect(verifyCalls.filter(v => v === 'mb_alice').length).toBe(before + 1);
+  });
+
+  it('never caches or counts Metabase being unreachable', async () => {
+    for (let i = 0; i < 6; i++) {
+      expect((await open('mb_down')).status).toBe(503);
+    }
+    expect(verifyCalls.filter(v => v === 'mb_down')).toHaveLength(6);
+    expect(httpApp.trackedFailureIpCount()).toBe(0);
+  });
+
+  it('forgets IPs whose failures have aged out', async () => {
+    await open('mb_bad1');
+    expect(httpApp.trackedFailureIpCount()).toBe(1);
+    vi.useFakeTimers({ now: Date.now() + 61_000, toFake: ['Date'] });
+    try {
+      await httpApp.sweepIdleSessions();
+      expect(httpApp.trackedFailureIpCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+describe('passthrough abuse controls: disabled', () => {
+  it('MCP_AUTH_FAILURES_PER_MINUTE=0 turns the IP budget off', async () => {
+    const root = createMockMetabaseClient();
+    const calls: string[] = [];
+    const app = createHttpApp(
+      makeConfig({ authFailuresPerMinute: 0, trustProxy: true }),
+      {
+        config: { mode: 'read', metabase: { maxRows: 10 } },
+        metabaseClient: root as any, llmService: null,
+        sqlGuardrails: new SQLGuardrails(createTestConfig().security),
+        rateLimiter: new TieredRateLimiter(), auditLogger: new AuditLogger(),
+        schemaManager: new SchemaManager(root as any), logger: new Logger('error'),
+      },
+      new Logger('error'),
+      {
+        createMetabaseClient: ((c: MetabaseCredential) => ({
+          getCurrentUser: async () => { calls.push(c.apiKey!); throw new MetabaseError(401, 'no'); },
+        })) as any,
+      }
+    );
+    const server = app.app.listen(0, '127.0.0.1');
+    await new Promise<void>((resolve, reject) => { server.once('listening', resolve); server.once('error', reject); });
+    const url = `http://127.0.0.1:${(server.address() as AddressInfo).port}/mcp`;
+    try {
+      for (let i = 0; i < 15; i++) {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json, text/event-stream', 'X-API-Key': `mb_x${i}` },
+          body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 't', version: '1' } } }),
+        });
+        expect(res.status).toBe(401);
+      }
+      expect(calls).toHaveLength(15);
+    } finally {
+      await new Promise(resolve => server.close(resolve));
+    }
   });
 });

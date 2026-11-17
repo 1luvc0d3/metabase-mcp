@@ -294,6 +294,13 @@ export interface HttpTransportConfig {
    * `passthrough`: each request carries the caller's own Metabase credential.
    */
   authMode: 'shared' | 'passthrough';
+  /**
+   * Passthrough: failed credential checks against Metabase allowed per client IP per minute
+   * before new session opens from that IP get 429. 0 disables.
+   */
+  authFailuresPerMinute: number;
+  /** Express `trust proxy` value, so the client IP comes from X-Forwarded-For */
+  trustProxy?: boolean | number | string;
 }
 
 export interface RedactionConfig {

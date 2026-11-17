@@ -9,7 +9,7 @@ import type { AppConfig, MetabaseCurrentUser } from '../client/types.js';
 import type { MetabaseClient } from '../client/metabase-client.js';
 import type { ToolContext } from '../tools/types.js';
 import type { Logger } from '../config.js';
-import type { TieredRateLimiter } from '../security/rate-limiter.js';
+import { RateLimiter, type TieredRateLimiter } from '../security/rate-limiter.js';
 import { registerTools } from '../tools/index.js';
 import { SchemaManager } from '../utils/schema-manager.js';
 import { ConfigurationError, MetabaseError } from '../utils/errors.js';
@@ -62,9 +62,57 @@ export interface HttpApp {
   closeAll(): Promise<void>;
   /** Passthrough mode: how many distinct credentials currently have a live context */
   credentialContextCount(): number;
+  /** Passthrough mode: how many client IPs have recent failed credential checks */
+  trackedFailureIpCount(): number;
 }
 
 const LOOPBACK_HOSTS = new Set(['127.0.0.1', 'localhost', '::1']);
+
+/** How long a credential Metabase rejected is answered 401 without asking Metabase again */
+const REJECTED_TTL_MS = 5 * 60_000;
+/** How long a credential Metabase accepted skips the per-IP failure budget */
+const VERIFIED_TTL_MS = 60 * 60_000;
+/** Upper bound on each credential cache; the oldest entries go first */
+const CACHE_MAX_ENTRIES = 10_000;
+
+/** Digest -> expiry time, bounded, oldest evicted first */
+class ExpiringSet {
+  private entries = new Map<string, number>();
+  constructor(private readonly ttlMs: number) {}
+
+  has(key: string, now = Date.now()): boolean {
+    const expires = this.entries.get(key);
+    if (expires === undefined) return false;
+    if (expires <= now) {
+      this.entries.delete(key);
+      return false;
+    }
+    return true;
+  }
+
+  add(key: string, now = Date.now()): void {
+    this.entries.delete(key);
+    this.entries.set(key, now + this.ttlMs);
+    if (this.entries.size > CACHE_MAX_ENTRIES) {
+      const oldest = this.entries.keys().next().value;
+      if (oldest !== undefined) this.entries.delete(oldest);
+    }
+  }
+
+  delete(key: string): void {
+    this.entries.delete(key);
+  }
+
+  prune(now = Date.now()): void {
+    for (const [key, expires] of this.entries) {
+      if (expires <= now) this.entries.delete(key);
+    }
+  }
+
+  get size(): number {
+    return this.entries.size;
+  }
+}
 
 /**
  * Keyed digest of a secret (server token or Metabase credential), used only in memory for
@@ -244,6 +292,10 @@ export function createHttpApp(
   }
 
   const app = createMcpExpressApp({ host: httpConfig.host });
+  if (httpConfig.trustProxy !== undefined) {
+    // Behind a reverse proxy: take the client IP from X-Forwarded-For
+    app.set('trust proxy', httpConfig.trustProxy);
+  }
 
   // CORS middleware
   if (httpConfig.corsOrigin) {
@@ -319,25 +371,99 @@ export function createHttpApp(
   }
 
   /**
+   * Passthrough abuse controls. Anyone who can reach the port can make the server ask
+   * Metabase about a credential, so:
+   * - a credential Metabase rejected is answered from memory for a while (a client retrying
+   *   one bad key costs one Metabase call, and doesn't count against its IP);
+   * - concurrent checks of the same credential share one Metabase call;
+   * - fresh rejections are counted per client IP, and once an IP is over budget its new
+   *   session opens get 429 before Metabase is asked.
+   * Credentials Metabase recently accepted skip the IP budget, so legitimate users behind a
+   * shared address (company NAT, a reverse proxy, Claude's connector IPs) keep working.
+   * Metabase being unreachable is never cached or counted.
+   */
+  const rejected = new ExpiringSet(REJECTED_TTL_MS);
+  const verified = new ExpiringSet(VERIFIED_TTL_MS);
+  const inflight = new Map<string, Promise<MetabaseCurrentUser>>();
+  const ipFailures = new Map<string, RateLimiter>();
+  const failureBudget = httpConfig.authFailuresPerMinute;
+
+  function failureLimiterFor(ip: string): RateLimiter {
+    let limiter = ipFailures.get(ip);
+    if (!limiter) {
+      limiter = new RateLimiter({ requestsPerMinute: failureBudget });
+      ipFailures.set(ip, limiter);
+    }
+    return limiter;
+  }
+
+  function verifyWithMetabase(principal: string, client: MetabaseClient): Promise<MetabaseCurrentUser> {
+    let pending = inflight.get(principal);
+    if (!pending) {
+      pending = client.getCurrentUser().finally(() => inflight.delete(principal));
+      inflight.set(principal, pending);
+    }
+    return pending;
+  }
+
+  /**
    * Passthrough: verify the credential with Metabase and build (or reuse) its context.
    * Sends the error response itself and returns null when the credential can't be used.
    */
   async function resolvePassthrough(
+    req: Request,
     res: Response
   ): Promise<{ user: string; context: ToolContext; metabaseUserId: number } | null> {
     const credential = res.locals.credential as MetabaseCredential;
     const principal = res.locals.principal as string;
+    const ip = req.ip ?? 'unknown';
+
+    if (rejected.has(principal)) {
+      res.status(401).json({ error: 'Metabase rejected the credential' });
+      return null;
+    }
+
     const existing = credentialContexts.get(principal);
+    const knownGood = existing !== undefined || verified.has(principal);
+    if (!knownGood && failureBudget > 0) {
+      const limiter = ipFailures.get(ip);
+      if (limiter && !limiter.wouldAllow()) {
+        const retryAfter = Math.max(1, Math.ceil(limiter.getResetTime() / 1000));
+        toolContext.auditLogger.logBlocked('session_open', 'too many failed credential checks', {
+          authMode: 'passthrough',
+          ip,
+        });
+        res.setHeader('Retry-After', String(retryAfter));
+        res.status(429).json({
+          error: `Too many failed credential checks from this address; retry in ${retryAfter}s`,
+        });
+        return null;
+      }
+    }
+
     const client = existing?.context.metabaseClient ?? options.createMetabaseClient!(credential);
 
     let identity: MetabaseCurrentUser;
     try {
-      identity = await client.getCurrentUser();
+      identity = await verifyWithMetabase(principal, client);
     } catch (error) {
       if (error instanceof MetabaseError && (error.statusCode === 401 || error.statusCode === 403)) {
-        toolContext.auditLogger.logBlocked('session_open', 'Metabase rejected the credential', {
-          authMode: 'passthrough',
-        });
+        // Concurrent opens with the same credential share one failure: count it once
+        if (!rejected.has(principal)) {
+          rejected.add(principal);
+          verified.delete(principal);
+          if (failureBudget > 0) {
+            try {
+              failureLimiterFor(ip).checkLimit();
+            } catch {
+              // Already over budget; the next open from this IP gets 429
+            }
+          }
+          toolContext.auditLogger.logBlocked('session_open', 'Metabase rejected the credential', {
+            authMode: 'passthrough',
+            ip,
+          });
+        }
         res.status(401).json({ error: 'Metabase rejected the credential' });
       } else {
         logger.warn('Could not verify a credential with Metabase', { error: String(error) });
@@ -346,6 +472,7 @@ export function createHttpApp(
       return null;
     }
 
+    verified.add(principal);
     const user = actorFor(identity);
     const context = existing?.context ?? {
       ...toolContext,
@@ -379,7 +506,7 @@ export function createHttpApp(
     let context: ToolContext;
     let metabaseUserId: number | undefined;
     if (passthrough) {
-      const resolved = await resolvePassthrough(res);
+      const resolved = await resolvePassthrough(req, res);
       if (!resolved) return;
       ({ user, context, metabaseUserId } = resolved);
     } else {
@@ -448,6 +575,12 @@ export function createHttpApp(
     app,
     sessions,
     async sweepIdleSessions(now = Date.now()) {
+      // Housekeeping for the passthrough abuse controls
+      rejected.prune(now);
+      verified.prune(now);
+      for (const [ip, limiter] of ipFailures) {
+        if (limiter.getRemainingRequests() === failureBudget) ipFailures.delete(ip);
+      }
       const idle = [...sessions.entries()]
         .filter(([, s]) => now - s.lastSeen > idleMs)
         .map(([id]) => id);
@@ -463,6 +596,9 @@ export function createHttpApp(
     },
     credentialContextCount() {
       return credentialContexts.size;
+    },
+    trackedFailureIpCount() {
+      return ipFailures.size;
     },
   };
 }

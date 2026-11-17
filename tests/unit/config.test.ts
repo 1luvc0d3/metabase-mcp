@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { AppConfigSchema, loadConfig, validateConfig, parseAuthTokens, Logger, type LogLevel } from '../../src/config.js';
+import { AppConfigSchema, loadConfig, validateConfig, parseAuthTokens, parseTrustProxy, Logger, type LogLevel } from '../../src/config.js';
 import { ConfigurationError } from '../../src/utils/errors.js';
 import { silenceConsole, restoreConsole } from '../setup.js';
 
@@ -1252,5 +1252,36 @@ describe('MCP_AUTH_MODE=passthrough', () => {
   it('refuses server bearer tokens', () => {
     process.env.MCP_AUTH_TOKENS = 'alice:tok';
     expect(() => loadConfig()).toThrow(/can't be combined/);
+  });
+});
+
+describe('parseTrustProxy()', () => {
+  it('turns "true" into a boolean, not an address named "true"', () => {
+    expect(parseTrustProxy('true')).toBe(true);
+  });
+  it('treats unset and "false" as not trusting a proxy', () => {
+    expect(parseTrustProxy(undefined)).toBeUndefined();
+    expect(parseTrustProxy('')).toBeUndefined();
+    expect(parseTrustProxy('false')).toBeUndefined();
+  });
+  it('turns a number into a hop count', () => {
+    expect(parseTrustProxy('2')).toBe(2);
+  });
+  it('passes address lists through', () => {
+    expect(parseTrustProxy('loopback, 10.0.0.0/8')).toBe('loopback, 10.0.0.0/8');
+  });
+});
+
+describe('auth failure budget config', () => {
+  const originalEnv = { ...process.env };
+  afterEach(() => { process.env = { ...originalEnv }; });
+
+  it('defaults to 10 per minute and accepts 0', () => {
+    process.env.METABASE_URL = 'https://metabase.example.com';
+    process.env.METABASE_API_KEY = 'mb_key';
+    delete process.env.MCP_AUTH_FAILURES_PER_MINUTE;
+    expect(loadConfig().http.authFailuresPerMinute).toBe(10);
+    process.env.MCP_AUTH_FAILURES_PER_MINUTE = '0';
+    expect(loadConfig().http.authFailuresPerMinute).toBe(0);
   });
 });

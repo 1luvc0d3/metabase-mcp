@@ -36,6 +36,16 @@ People send one of:
 
 **Metabase API keys belong to a group, not a person.** An API key acts as its own synthetic user with the permissions of the group it was created in. For per-person access with API keys, an admin creates one key per person (**Admin** > **Settings** > **API Keys**) in the group that matches that person's access; permissions are then per group, and the audit log names the key. A session token acts as the real person with their exact permissions, but it expires (14 days by default) and has to be replaced.
 
+**Throttling failed credentials.** Anyone who can reach the server can make it ask Metabase about a credential, so passthrough limits that:
+
+- A credential Metabase rejected gets `401` from memory for 5 minutes, without asking Metabase again. A client stuck retrying a bad key costs one Metabase check, and doesn't count against its address.
+- Simultaneous checks of the same credential share one Metabase request.
+- New rejections are counted per client IP. Past `MCP_AUTH_FAILURES_PER_MINUTE` (default 10), new sessions from that IP get `429` with `Retry-After`, before Metabase is asked. Open sessions aren't affected.
+- A credential Metabase accepted in the last hour skips that budget, so people sharing an address (company NAT, a reverse proxy, Claude's connector IPs) keep working while someone at the same address presents bad keys. Someone connecting for the first time from that address during the lockout does get `429` until it expires.
+- Metabase being unreachable (`503`) is never cached or counted.
+
+Behind a reverse proxy, set `MCP_TRUST_PROXY` so the server sees each client's IP from `X-Forwarded-For` instead of the proxy's: `true` trusts every hop, a number trusts that many hops, and a list such as `loopback, 10.0.0.0/8` trusts those addresses. Leave it unset when clients connect directly, or anyone could choose their own IP by sending that header.
+
 Passthrough refuses to start if `METABASE_API_KEY`, `METABASE_SESSION_TOKEN` or `MCP_AUTH_TOKENS` is set, so a request without a credential can never fall back to a server-side one.
 
 ## Start the server
@@ -108,6 +118,8 @@ claude mcp add --transport http metabase http://mcp.internal:3000/mcp \
 | `MCP_AUTH_MODE` | `shared` | `shared` (one server-side Metabase key) or `passthrough` (each person's own credential) |
 | `MCP_AUTH_TOKENS` | - | Shared mode: comma-separated `name:token` pairs, one per person. Required unless `MCP_ALLOW_UNAUTHENTICATED=true` |
 | `MCP_AUTH_TOKEN` | - | Shared mode: legacy single token, treated as a user named `default` |
+| `MCP_AUTH_FAILURES_PER_MINUTE` | `10` | Passthrough: new credentials Metabase may reject per client IP per minute before that IP gets `429`. `0` turns it off |
+| `MCP_TRUST_PROXY` | - | Behind a reverse proxy: `true`, a hop count, or trusted addresses, so client IPs come from `X-Forwarded-For` |
 | `MCP_SESSION_IDLE_MINUTES` | `30` | Close sessions with no requests for this long |
 | `MCP_ALLOW_UNAUTHENTICATED` | `false` | Shared mode: allow a non-localhost address with no tokens |
 | `MCP_HTTP_PORT` | `3000` | Port inside the container |
