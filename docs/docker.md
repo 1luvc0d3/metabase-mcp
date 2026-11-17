@@ -59,7 +59,7 @@ claude mcp add --transport http metabase http://mcp.internal:3000/mcp \
   --header "Authorization: Bearer <your token>"
 ```
 
-**Claude (claude.ai, Desktop, Cowork, mobile) custom connectors** connect from Anthropic's cloud, not from your machine, so the server must be reachable from the public internet on HTTPS port 443. Servers inside a private network or VPN won't connect unless you allowlist [Anthropic's IP addresses](https://docs.claude.com/en/api/ip-addresses). Put the container behind a TLS-terminating reverse proxy (Caddy, nginx, a cloud load balancer) rather than exposing port 3000 directly. Add the URL as a custom connector and set the request header `Authorization` to `Bearer <your token>`, including the word `Bearer`. Request-header auth for custom connectors is [in beta for a limited set of organizations](https://claude.com/docs/connectors/custom/remote-mcp); if yours doesn't have it yet, use Claude Code.
+**Claude (claude.ai, Desktop, Cowork, mobile) custom connectors** connect from Anthropic's cloud, not from your machine, so the server must be reachable from the public internet on HTTPS port 443. Servers inside a private network or VPN won't connect unless you allowlist Anthropic's IP addresses in your firewall. Put the container behind a TLS-terminating reverse proxy (Caddy, nginx, a cloud load balancer) rather than exposing port 3000 directly. Add the URL as a custom connector and set the request header `Authorization` to `Bearer <your token>`, including the word `Bearer`. Request-header auth for custom connectors is [in beta for a limited set of organizations](https://claude.com/docs/connectors/custom/remote-mcp); if yours doesn't have it yet, use Claude Code.
 
 ## Server settings
 
