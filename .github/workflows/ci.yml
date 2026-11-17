@@ -72,9 +72,23 @@ jobs:
           test "$status" = 401 || { echo "::error::expected 401 without token, got $status"; exit 1; }
           test "$(docker inspect -f '{{.Config.User}}' mcp)" = node
 
+      - name: Starts in passthrough mode without server-side secrets
+        run: |
+          docker run -d --name mcp-pass -p 3001:3000 \
+            -e METABASE_URL=http://metabase.invalid -e MCP_AUTH_MODE=passthrough metabase-mcp:ci
+          for _ in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:3001/health; then break; fi
+            sleep 1
+          done
+          curl -sf http://127.0.0.1:3001/health | grep -q '"authMode":"passthrough"'
+          status=$(curl -s -o /dev/null -w '%{http_code}' -X POST http://127.0.0.1:3001/mcp)
+          test "$status" = 401 || { echo "::error::expected 401 without a credential, got $status"; exit 1; }
+
       - name: Container logs
         if: always()
-        run: docker logs mcp || true
+        run: |
+          docker logs mcp || true
+          docker logs mcp-pass || true
 
   # PRs are squash-merged and the PR title becomes the commit on main, which release-please
   # reads to decide the next version. Skipped (and so passing) outside pull_request events.

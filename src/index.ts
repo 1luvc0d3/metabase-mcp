@@ -106,7 +106,13 @@ async function main() {
 
   // Start transport
   if (config.transport === 'http') {
-    await startHttpTransport(config, toolContext, logger);
+    await startHttpTransport(config, toolContext, logger, {
+      // Passthrough mode: a client per caller credential, with the same redaction
+      createMetabaseClient: credential => new MetabaseClient(
+        { ...config.metabase, apiKey: credential.apiKey, sessionToken: credential.sessionToken },
+        redactor
+      ),
+    });
   } else {
     await startStdioTransport(server, logger);
   }

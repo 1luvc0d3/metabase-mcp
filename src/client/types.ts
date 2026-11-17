@@ -236,6 +236,13 @@ export interface InsightsResult {
 
 export type ServerMode = 'read' | 'write' | 'full';
 
+/** GET /api/user/current, trimmed to what identifies the caller */
+export interface MetabaseCurrentUser {
+  id: number;
+  email: string;
+  common_name: string;
+}
+
 export interface MetabaseConfig {
   url: string;
   apiKey?: string;
@@ -282,6 +289,11 @@ export interface HttpTransportConfig {
   sessionIdleMinutes: number;
   /** Allow listening on a non-loopback host with no auth token */
   allowUnauthenticated: boolean;
+  /**
+   * `shared`: one server-side Metabase credential for everyone.
+   * `passthrough`: each request carries the caller's own Metabase credential.
+   */
+  authMode: 'shared' | 'passthrough';
 }
 
 export interface RedactionConfig {
