@@ -64,7 +64,7 @@ This server implements multiple defensive layers:
 
 ## Known Limitations
 
-Documented in the [README's Data Privacy section](README.md#data-privacy-note):
+Documented in the [data privacy section](docs/security.md#data-privacy):
 
 - When NLQ or insight tools are used, query result data is sent to the Anthropic API for analysis. Users should evaluate this against their data governance policies before enabling NLQ features on databases with sensitive data.
 - PII-aware redaction before LLM calls is tracked as [roadmap item #16](https://github.com/1luvc0d3/metabase-mcp/issues/16).

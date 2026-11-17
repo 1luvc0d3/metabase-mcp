@@ -7,163 +7,43 @@
 [![Node](https://img.shields.io/node/v/@ai-1luvc0d3/metabase-mcp.svg)](https://nodejs.org)
 [![Glama score](https://glama.ai/mcp/servers/1luvc0d3/metabase-mcp/badges/score.svg)](https://glama.ai/mcp/servers/1luvc0d3/metabase-mcp)
 
-The **headless, AI-augmented** [MCP](https://modelcontextprotocol.io/) server for [Metabase](https://www.metabase.com/) — API-key auth that works for agents, CI, and VPN'd self-hosted instances, with AI insights, production security controls, and support for any Metabase version.
+An [MCP](https://modelcontextprotocol.io/) server for [Metabase](https://www.metabase.com/) with API-key auth and production guardrails. It lets Claude and other AI agents query, explore and build in Metabase on any edition and any version, including from CI and behind a VPN.
 
-## Why This One?
+## Why this one?
 
-Metabase ships an [official MCP server](https://www.metabase.com/docs/latest/ai/mcp) on every plan, and as of v65 (v64 LTS) it's broad: 23 tools covering questions, dashboards, collections, metrics, alerts and subscriptions, structured and SQL queries, and inline charts. It's good, and if it fits your setup you should use it.
+Metabase ships an [official MCP server](https://www.metabase.com/docs/latest/ai/mcp). It's good, and if it fits your setup you should use it. This server is for the setups it doesn't fit, mostly **open-source and Starter Metabase**:
 
-This server exists for the setups it doesn't fit — mostly **open-source / Starter Metabase**, where the official server's controls are thin:
-
-- **Headless / agent use on any plan.** The official MCP endpoint uses OAuth; headless access (JWT bearer) is [Pro/Enterprise only](https://www.metabase.com/docs/latest/ai/mcp). This server authenticates with a Metabase API key, so it works in CI, autonomous agents, and self-hosted instances behind a VPN on any edition.
-- **Governance without an upgrade.** Per-group MCP tool access and MCP analytics are [Pro/Enterprise features](https://www.metabase.com/docs/latest/ai/usage-controls); on the open-source edition the MCP server is an instance-wide on/off switch. This server has read/write/full modes, per-tool allow/deny lists, column redaction, SQL injection guardrails, tiered rate limits, and risk-scored audit logging — on any edition.
-- **Composition.** `batch_execute` (up to 20 parallel ops) and `run_workflow` (chained steps with output references) have no official equivalent, and access control is enforced inside both.
-- **AI inside the server.** NLQ-to-SQL, SQL explain/optimize/validate, insights, and trend analysis run server-side with your own Anthropic key, independent of the connecting client.
+- **Headless on any plan.** Authenticates with a Metabase API key, so it works for agents, CI and VPN'd self-hosted instances. The official server's headless auth is Pro/Enterprise only.
+- **Governance without an upgrade.** Read/write/full modes, per-tool allow/deny lists, column redaction, SQL guardrails, tiered rate limits and a risk-scored audit log, on any edition.
+- **Composition.** `batch_execute` runs up to 20 operations in parallel; `run_workflow` chains steps with output references.
+- **AI in the server.** NLQ-to-SQL, SQL explain/optimize, insights and trend analysis with your own Anthropic key.
 - **Any Metabase version**, including pre-v0.60 instances that can't run the official MCP.
 
-| Capability | @ai-1luvc0d3/metabase-mcp | Metabase Official (v65) |
-|---|:--:|:--:|
-| Read dashboards / cards / databases | ✅ | ✅ |
-| Create & update questions, dashboards, collections | ✅ | ✅ (plus metrics, segments, alerts, subscriptions, documents) |
-| Structured (MBQL) queries | ❌ SQL only ([#45](https://github.com/1luvc0d3/metabase-mcp/issues/45)) | ✅ `execute_query` |
-| Raw SQL execution | ✅ SELECT-only + guardrails | ✅ `execute_sql` (needs native-query permission) |
-| Permanent delete of cards & dashboards | ✅ | ❌ archive only |
-| Batch execution (parallel multi-op in one call) | ✅ | ❌ |
-| Workflow pipelines (chained steps with output references) | ✅ | ❌ |
-| NLQ → SQL + explain / optimize / validate (LLM in the server) | ✅ | ❌ (relies on the AI client) |
-| Inline interactive charts rendered in the AI client | ❌ | ✅ |
-| Per-tool access control | ✅ any edition (allow/deny lists, modes) | Pro/Enterprise (per group); OSS: instance on/off |
-| Column redaction in query results | ✅ `MCP_REDACT_COLUMNS` | ❌ (relies on Metabase permissions) |
-| SQL injection guardrails | ✅ | permission-based |
-| Tiered rate limiting (read / write / LLM) | ✅ | not tiered |
-| Audit log of tool calls | ✅ any edition, risk-scored | Pro/Enterprise (MCP analytics) |
-| Headless auth (CI, agents, VPN'd self-hosted) | ✅ API key, any edition | Pro/Enterprise (JWT bearer) |
-| OAuth per-user permission scoping | ❌ (API key) | ✅ |
-| Works on Metabase &lt; v0.60 | ✅ | ❌ |
+Choose the official server if you want OAuth per-user permissions, structured (MBQL) queries or inline charts, or if you're on Pro/Enterprise. → [Full comparison](docs/comparison.md)
 
-<sub>Official column per Metabase's docs for v65, checked November 2026.</sub>
+## Quick start
 
-**Use this if:** you're on open-source or Starter Metabase and need headless agent access, per-tool gating, redaction, or an audit trail; you want batch/workflow composition; or you're on a version older than v0.60.
+You need a Metabase URL and an API key (**Admin** > **Settings** > **API Keys** > **Create API Key**).
 
-**Use Metabase's official MCP if:** your instance is reachable for OAuth and you want per-user permission scoping, structured queries, or inline charts — or you're on Pro/Enterprise, where it now has per-group tool access, JWT headless auth, and MCP analytics.
+**Claude Desktop (one-click):** download `metabase-mcp-*.mcpb` from the [latest release](https://github.com/1luvc0d3/metabase-mcp/releases/latest), double-click it, and enter your URL and key. They're stored in the OS keychain.
 
-### And the other community servers?
-
-Several community Metabase MCP servers exist, some exposing far more of the raw REST API (90+ tools). This one makes a different trade: a curated tool surface with production controls. In our August 2026 audit, no other community server had SQL injection guardrails, tiered rate limiting, per-operation audit logging, or per-tool access control (enforced inside batch and workflow calls too); the official server offers tool access and audit logging only on Pro/Enterprise. If you want maximum raw API coverage, one of the broad-CRUD servers may fit better; if an agent is going to touch your BI unattended, safety rails are the feature.
-
-## Features
-
-- **30 tools** across read, batch, workflow, write, NLQ, and insight categories
-- **Batch execution** -- run up to 20 operations in parallel in a single call (reads always; non-destructive writes in write/full mode)
-- **Workflow pipelines** -- chain tools sequentially with `$stepName.path` output references between steps, including write steps (e.g. create a card, then add it to a dashboard, in one call)
-- **Compact responses by default** -- all tools return compact JSON (~50% token reduction); opt into pretty-printing with `format: "default"`
-- **Natural language to SQL** -- ask questions, get SQL + results (powered by Claude)
-- **SQL guardrails** -- injection detection, DDL/DML blocking, dangerous pattern enforcement
-- **Tiered rate limiting** -- configurable per-minute limits for read, write, and LLM operations
-- **Audit logging** -- every operation logged with risk assessment
-- **Three server modes** -- `read` (safe default), `write`, or `full` (with AI insights)
-- **Schema caching** -- fast NLQ context for large databases
-
-## Quick Start
-
-### One-click install (recommended)
-
-1. Download the latest `metabase-mcp-*.mcpb` from [GitHub Releases](https://github.com/1luvc0d3/metabase-mcp/releases/latest)
-2. Double-click to install in Claude Desktop
-3. Enter your Metabase URL and API key when prompted — stored securely in the OS keychain
-
-### Using npx
+**Claude Code:**
 
 ```bash
-npx @ai-1luvc0d3/metabase-mcp
+claude mcp add metabase \
+  -e METABASE_URL=https://your-metabase.example.com \
+  -e METABASE_API_KEY=mb_your_api_key_here \
+  -- npx -y @ai-1luvc0d3/metabase-mcp
 ```
 
-### Manual install
-
-```bash
-npm install -g @ai-1luvc0d3/metabase-mcp
-metabase-mcp
-```
-
-### From source
-
-```bash
-git clone https://github.com/1luvc0d3/metabase-mcp.git
-cd metabase-mcp
-npm install
-npm run build
-npm start
-```
-
-## Configuration
-
-Set environment variables or create a `.env` file (see `.env.example`):
-
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `METABASE_URL` | Yes | - | Your Metabase instance URL |
-| `METABASE_API_KEY` | Yes* | - | Metabase API key (recommended) |
-| `METABASE_SESSION_TOKEN` | Yes* | - | Metabase session token, sent as `X-Metabase-Session`. Use when you can't create an API key. Sessions expire (14 days by default), so prefer an API key for long-running setups |
-| `MCP_MODE` | No | `read` | Server mode: `read`, `write`, or `full` |
-| `ANTHROPIC_API_KEY` | No | - | Enables NLQ and insight tools |
-| `METABASE_TIMEOUT` | No | `30000` | Request timeout (ms) |
-| `METABASE_MAX_ROWS` | No | `10000` | Max rows returned per query |
-| `LOG_LEVEL` | No | `info` | Logging: `debug`, `info`, `warn`, `error` |
-| `MCP_TOOLS_ALLOW` | No | - | Comma-separated allowlist — only these tools are exposed |
-| `MCP_TOOLS_DENY` | No | - | Comma-separated denylist — these tools are never exposed (wins over allow) |
-| `MCP_REDACT_COLUMNS` | No | - | Comma-separated column names to redact from query results (case-insensitive, `*` wildcard) |
-| `MCP_REDACT_MODE` | No | `mask` | `mask` replaces values with `[REDACTED]`; `drop` removes the columns entirely |
-| `RATE_LIMIT_READ_PER_MINUTE` | No | `120` | Read-tier rate limit |
-| `RATE_LIMIT_WRITE_PER_MINUTE` | No | `30` | Write-tier rate limit |
-| `RATE_LIMIT_LLM_PER_MINUTE` | No | `20` | LLM-tier rate limit |
-| `RATE_LIMIT_REQUESTS_PER_MINUTE` | No | - | Legacy: sets the read tier when `RATE_LIMIT_READ_PER_MINUTE` is unset |
-
-\* Set one of `METABASE_API_KEY` or `METABASE_SESSION_TOKEN`. If both are set, the API key is used.
-
-### Per-tool access control
-
-Server modes give coarse control (read / write / full); `MCP_TOOLS_ALLOW` and `MCP_TOOLS_DENY` refine it per tool. Denied tools are not registered with the MCP client at all, and the same policy is enforced on operations nested inside `batch_execute` and `run_workflow` — a denied tool can't be reached through a batch or pipeline. Deny always wins over allow.
-
-```bash
-# Expose read tools but never raw SQL
-MCP_MODE=read
-MCP_TOOLS_DENY=execute_query
-```
-
-### Column redaction
-
-`MCP_REDACT_COLUMNS` keeps chosen columns out of the AI's context while people keep full access to them in Metabase. Every query result is redacted inside the server, before it reaches the MCP client or the in-server LLM (NLQ and insight tools), including results from `batch_execute` and `run_workflow`.
-
-```bash
-# Mask emails, phone numbers and anything ending in _ssn
-MCP_REDACT_COLUMNS=email,phone*,*_ssn
-MCP_REDACT_MODE=mask   # or drop
-```
-
-- **mask** (default) keeps the column and replaces every value with `[REDACTED]`, so the agent knows the column exists and can still reason about the query's shape.
-- **drop** removes the column from the result entirely.
-
-Metabase metadata that would leak values is stripped for redacted columns too: column fingerprints (min/max/average statistics) in query results, cards and dashboards, timeseries insights, and the filter values Metabase returns with a dashboard. Each redaction is written to the audit log with the column names and cell count.
-
-**What this protects against:** accidental exposure by a well-behaved agent, such as `SELECT *`, `SELECT email, name` or running a saved question that includes a sensitive column. **What it doesn't:** matching is by result column name, so a query that renames a column (`SELECT email AS e`) or packs a row into one value (`row_to_json(u)`) gets around it, and so does an adversarial or prompt-injected agent. Aggregates come back under their own names (`max(salary)` returns a column called `max`), and Metabase suffixes duplicate names in joins (`email_2`) — use a wildcard like `email*` to catch those. For a hard boundary, restrict the API key's group with Metabase permissions or point it at database views without the sensitive columns.
-
-### Generate a Metabase API Key
-
-1. Go to your Metabase instance
-2. Navigate to **Admin** > **Settings** > **API Keys**
-3. Click **Create API Key**
-4. Copy the key and set it as `METABASE_API_KEY`
-
-## Claude Desktop Integration
-
-Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
+**Any MCP client** (for example `claude_desktop_config.json`):
 
 ```json
 {
   "mcpServers": {
     "metabase": {
       "command": "npx",
-      "args": ["@ai-1luvc0d3/metabase-mcp"],
+      "args": ["-y", "@ai-1luvc0d3/metabase-mcp"],
       "env": {
         "METABASE_URL": "https://your-metabase.example.com",
         "METABASE_API_KEY": "mb_your_api_key_here",
@@ -174,91 +54,32 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
 }
 ```
 
-## Server Modes
+Then ask something like *"What dashboards do we have about customer retention?"*
 
-| Mode | Tools | Description |
-|------|-------|-------------|
-| `read` | 12 + NLQ | Read-only access, batch execution, and workflow pipelines |
-| `write` | 22 + NLQ | Adds create/update/delete for cards, dashboards, collections |
-| `full` | 30 | All tools including automated insights and trend analysis |
+## Configuration
 
-### Available Tools
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `METABASE_URL` | required | Your Metabase instance URL |
+| `METABASE_API_KEY` | required | Metabase API key (or `METABASE_SESSION_TOKEN`) |
+| `MCP_MODE` | `read` | `read`, `write` or `full` (see below) |
+| `ANTHROPIC_API_KEY` | - | Enables the NLQ and insight tools |
+| `MCP_TOOLS_ALLOW` / `MCP_TOOLS_DENY` | - | Expose only, or never expose, these tools |
+| `MCP_REDACT_COLUMNS` | - | Columns to mask in query results, e.g. `email,phone*,*_ssn` |
 
-**Read (always available)**
-`list_dashboards`, `get_dashboard`, `list_cards`, `get_card`, `execute_card`, `list_databases`, `get_database_schema`, `execute_query`, `search_content`, `get_collections`
+All options, including timeouts, row limits, rate limits and redaction details: [docs/configuration.md](docs/configuration.md).
 
-**Batch & Workflow (always available)**
-`batch_execute`, `run_workflow`
+## Tools
 
-In `write`/`full` mode, both also accept the non-destructive write tools (`create_card`, `update_card`, `create_dashboard`, `update_dashboard`, `add_card_to_dashboard`, `create_collection`, `move_to_collection`). Delete/remove operations are never batchable — they must be explicit single tool calls.
+| Mode | Tools | Adds |
+|------|-------|------|
+| `read` (default) | 12 | Dashboards, cards, databases, collections, search, SELECT-only SQL, `batch_execute`, `run_workflow` |
+| `write` | 22 | Create, update and delete cards, dashboards and collections |
+| `full` | 30 | AI insights, metric comparison and trend analysis |
 
-**Write (write/full modes)**
-`create_card`, `update_card`, `delete_card`, `create_dashboard`, `update_dashboard`, `delete_dashboard`, `add_card_to_dashboard`, `remove_card_from_dashboard`, `create_collection`, `move_to_collection`
+With `ANTHROPIC_API_KEY` set, every mode also gets `nlq_to_sql`, `explain_sql`, `optimize_sql` and `validate_sql`.
 
-**NLQ (requires ANTHROPIC_API_KEY)**
-`nlq_to_sql`, `explain_sql`, `optimize_sql`, `validate_sql`
-
-**Insights (full mode + ANTHROPIC_API_KEY)**
-`ask_data`, `generate_insights`, `compare_metrics`, `trend_analysis`
-
-## Examples
-
-### 1. Exploring your data
-
-> **You**: What dashboards do we have related to customer retention?
-
-Claude uses `search_content` to find retention-related dashboards, then `get_dashboard` to summarize the key metrics. You see a ranked list with the most relevant results.
-
-> **You**: Run the "Monthly Active Users" card for the last 90 days
-
-Claude calls `list_cards` to locate the card, then `execute_card` with the appropriate time filter. Results come back as a table you can ask follow-up questions about ("what was the biggest dip and when?").
-
-### 2. Ad-hoc SQL with safety rails
-
-> **You**: Show me the top 10 products by revenue last quarter from the sales database
-
-Claude calls `list_databases` to find the sales database, `get_database_schema` to inspect the relevant tables, then generates and runs a `SELECT` query via `execute_query`. The query is validated against the SQL guardrails (no `DROP`/`DELETE`/`UNION`, single statement only) before execution. Audit log entry is written with the query and row count.
-
-> **You**: DROP TABLE users
-
-Request is blocked. Claude surfaces: *"Blocked SQL pattern detected: DROP — this operation is not allowed."* The block is logged as a high-risk audit event.
-
-### 3. Natural language to SQL (requires ANTHROPIC_API_KEY)
-
-> **You**: Which support agents closed the most tickets this week, and how does that compare to last week?
-
-Claude uses `nlq_to_sql` with the database schema as context to generate a comparative SQL query. You can ask it to `explain_sql` in plain English before running, or `optimize_sql` to suggest performance improvements — all before hitting your database.
-
-### 4. Saving a reusable query as a card (write mode)
-
-> **You**: Save the MAU trend query we just ran as a card called "MAU — Last 90 Days" in the Growth collection
-
-Claude calls `get_collections` to find "Growth", then `create_card` with your validated SQL. The card now lives in your Metabase library and can be re-executed by name in future conversations via `execute_card` — no LLM tokens spent on re-generating the query.
-
-### 5. Batch execution — parallel data gathering
-
-> **You**: Get me the details for dashboards 1, 3, and 7, plus the schema for the sales database
-
-Claude uses `batch_execute` to run all four operations in parallel in a single call:
-
-```json
-{
-  "operations": [
-    { "tool": "get_dashboard", "args": { "dashboard_id": 1 } },
-    { "tool": "get_dashboard", "args": { "dashboard_id": 3 } },
-    { "tool": "get_dashboard", "args": { "dashboard_id": 7 } },
-    { "tool": "get_database_schema", "args": { "database_id": 2 } }
-  ]
-}
-```
-
-One tool call instead of four. Results come back with per-operation success/failure, so partial failures don't block the rest.
-
-### 6. Workflow pipelines — chained multi-step operations
-
-> **You**: Find dashboards about revenue, get the first one's cards, and run the top card
-
-Claude uses `run_workflow` to chain the steps with output references:
+Workflows chain tools in one call, passing results between steps:
 
 ```json
 {
@@ -270,125 +91,39 @@ Claude uses `run_workflow` to chain the steps with output references:
 }
 ```
 
-Each step can reference results from previous steps using `$stepName.path[index].field` syntax. One round trip instead of three back-and-forth exchanges.
-
-In `write`/`full` mode, pipelines can also build content:
-
-> **You**: Save this query as a card and put it on a new "Growth" dashboard
-
-```json
-{
-  "steps": [
-    { "name": "card", "tool": "create_card", "args": { "name": "MAU Trend", "database_id": 2, "sql": "SELECT ..." } },
-    { "name": "dash", "tool": "create_dashboard", "args": { "name": "Growth" } },
-    { "name": "link", "tool": "add_card_to_dashboard", "args": { "dashboard_id": "$dash.id", "card_id": "$card.id" } }
-  ]
-}
-```
-
-Write steps go through the same guardrails as the standalone write tools: write-tier rate limiting, SQL validation, and per-operation audit logging. Destructive operations (deletes/removes) are not allowed in pipelines.
-
-### 7. Automated insights on query results (full mode)
-
-> **You**: Run last quarter's revenue query and tell me what's interesting
-
-Claude uses `execute_query` to run the query, then `generate_insights` which asks the Claude API to identify trends, outliers, and recommendations. You get a structured summary: headline number, 3-5 bullet points, and suggested follow-up questions.
-
-> **Note on data privacy**: `generate_insights`, `ask_data`, `compare_metrics`, and `trend_analysis` send query result rows to the Anthropic API for analysis. See [Data Privacy Note](#data-privacy-note) for details.
+Full tool list and more examples: [docs/tools.md](docs/tools.md).
 
 ## Security
 
-This server is designed for production use with multiple layers of protection:
+- **SQL guardrails:** only `SELECT`/`WITH`; DDL, DML and injection patterns are rejected
+- **Access control:** server modes plus per-tool allow/deny lists, enforced inside batches and workflows too
+- **Column redaction:** sensitive columns are masked before results reach the AI
+- **Rate limits:** separate read, write and LLM tiers
+- **Audit log:** every operation logged with a risk level
+- **Secret handling:** API keys never reach tool handlers, Metabase errors are sanitized, and auth headers are never forwarded on redirects
 
-- **SQL Guardrails**: Only `SELECT` and `WITH` queries are allowed by default. DDL/DML statements (`DROP`, `DELETE`, `INSERT`, etc.) are blocked. Injection patterns (UNION, comments, multi-statement, file ops, time-based attacks) are detected and rejected.
-- **Tiered Rate Limiting**: Separate limits for read (120/min), write (30/min), and LLM (20/min) operations, configurable via `RATE_LIMIT_*_PER_MINUTE`.
-- **Per-Tool Access Control**: `MCP_TOOLS_ALLOW` / `MCP_TOOLS_DENY` restrict which tools are exposed, enforced at registration and inside `batch_execute` / `run_workflow`.
-- **Column Redaction**: `MCP_REDACT_COLUMNS` masks or drops sensitive columns in every query result before it reaches the AI client or the in-server LLM. See [Column redaction](#column-redaction) for what it does and doesn't protect against.
-- **Audit Logging**: Every operation is logged with risk assessment (low/medium/high). Sensitive fields are automatically redacted. Log files are created with secure permissions (owner-only read/write).
-- **Secret Isolation**: API keys are never exposed to tool handlers. Error responses from Metabase are sanitized to prevent credential leakage.
-- **Redirect Protection**: API key headers are never forwarded on HTTP redirects.
+Details and limits: [docs/security.md](docs/security.md). Report vulnerabilities via [SECURITY.md](SECURITY.md).
 
-### Data Privacy Note
+## Privacy policy
 
-When using NLQ or insight tools (`ask_data`, `generate_insights`, etc.), **query result data is sent to the Anthropic API** for analysis. If your queries return sensitive data (PII, financial records, etc.), that data will be processed by Claude. Consider this when enabling NLQ features on databases containing sensitive information. Columns listed in `MCP_REDACT_COLUMNS` are redacted before any data is sent.
-
-## Privacy Policy
-
-**What this extension collects:**
-- Your Metabase API key and URL (stored locally in the OS keychain — never transmitted to us)
-- Your Anthropic API key, if provided (stored locally in the OS keychain — never transmitted to us)
-- No telemetry, analytics, or usage data is collected by this extension
-
-**What this extension transmits:**
-- All Metabase API calls (queries, dashboards, cards) go directly from your machine to your own Metabase instance
-- NLQ/insight tool usage sends your natural-language question, database schema context, and query result samples to the Anthropic API for processing (governed by [Anthropic's privacy policy](https://www.anthropic.com/legal/privacy))
-- If you don't provide an Anthropic API key, no data is sent to Anthropic — NLQ and insight tools are simply disabled
-
-**Data retention:**
-- This extension does not retain any data. Audit logs (if enabled via `AUDIT_LOG_FILE`) are written to your local filesystem only, with owner-only permissions (0600)
-
-**Third-party privacy policies:**
-- [Metabase Privacy Policy](https://www.metabase.com/privacy)
-- [Anthropic Privacy Policy](https://www.anthropic.com/legal/privacy)
-
-**Reporting security issues:** See [SECURITY.md](SECURITY.md) for responsible disclosure.
+- **Collected:** nothing. No telemetry, analytics or usage data. Your Metabase URL and keys stay on your machine (in the OS keychain when installed as a Claude Desktop extension).
+- **Transmitted:** Metabase API calls go straight from your machine to your own Metabase instance. The NLQ and insight tools send your question, schema context and query result samples to the Anthropic API ([privacy policy](https://www.anthropic.com/legal/privacy)); without an Anthropic key, nothing is sent to Anthropic. Columns in `MCP_REDACT_COLUMNS` are redacted first.
+- **Retained:** nothing. Audit logs (if enabled with `AUDIT_LOG_FILE`) are written only to your local filesystem, with owner-only (`0600`) permissions.
+- See also the [Metabase privacy policy](https://www.metabase.com/privacy).
 
 ## Troubleshooting
 
-### "Cannot connect to Metabase" / 401 errors
-- Verify `METABASE_URL` is correct and reachable (test: `curl $METABASE_URL/api/health`)
-- Verify `METABASE_API_KEY` is valid (regenerate in Metabase Admin > Settings > API Keys if needed)
-- The API key must have permissions for the databases you want to query
+Connection errors, blocked SQL, rate limits and missing tools: [docs/troubleshooting.md](docs/troubleshooting.md).
 
-### "Blocked SQL pattern detected" errors
-- Only `SELECT` and `WITH` queries are allowed by default
-- Even inside a `SELECT`, patterns like `UNION SELECT`, SQL comments (`--`, `/* */`), `xp_cmdshell`, `INTO OUTFILE`, etc. are blocked
-- To execute DML (`INSERT`, `UPDATE`, `DELETE`), you must run in `write` or `full` mode AND the SQL must still pass guardrails (it won't — by design)
-
-### "Rate limit exceeded" errors
-- Default limits: 120 reads/min, 30 writes/min, 20 LLM calls/min
-- Adjust with `RATE_LIMIT_REQUESTS_PER_MINUTE` env var
-- Wait for the retry-after period shown in the error
-
-### NLQ tools unavailable
-- Requires `ANTHROPIC_API_KEY` — verify it's set
-- Check it starts with `sk-` and has remaining credits
-- Insight tools additionally require `MCP_MODE=full`
-
-### Claude Desktop: extension installed but tools not appearing
-- Fully quit and restart Claude Desktop
-- Check logs: `~/Library/Logs/Claude/mcp*.log` on macOS
-- Verify `node --version` is >= 20
-
-## Feedback Wanted
-
-This project is young and your input shapes where it goes next — especially now that Metabase has shipped its own official MCP. A minute of your time helps a lot:
-
-- **Is this useful for your workflow?** Start a [GitHub Discussion](https://github.com/1luvc0d3/metabase-mcp/discussions) or [star the repo](https://github.com/1luvc0d3/metabase-mcp) — tells me where to invest.
-- **Which tools do you actually use?** Let me know in [Discussions](https://github.com/1luvc0d3/metabase-mcp/discussions) — helps prioritize what stays, what grows.
-- **Hit a bug?** [File an issue](https://github.com/1luvc0d3/metabase-mcp/issues/new) with your Metabase version, `MCP_MODE`, and reproduction steps.
-- **Missing a feature?** [Request it](https://github.com/1luvc0d3/metabase-mcp/issues/new) — especially something the [official Metabase MCP](https://www.metabase.com/docs/latest/ai/mcp) doesn't cover.
-- **Running in production?** I'd genuinely love to hear about it — open a Discussion or drop a note on the repo.
-
-## Support
-
-- **Bug reports / feature requests:** [GitHub Issues](https://github.com/1luvc0d3/metabase-mcp/issues)
-- **Questions / general feedback:** [GitHub Discussions](https://github.com/1luvc0d3/metabase-mcp/discussions)
-- **Security vulnerabilities:** [Private disclosure](https://github.com/1luvc0d3/metabase-mcp/security/advisories/new) — see [SECURITY.md](SECURITY.md)
-- **Response time:** typically within 5 business days
-
-## Development
+## Contributing
 
 ```bash
-npm install         # Install dependencies
-npm run build       # Compile TypeScript
-npm run dev         # Watch mode
-npm test            # Run all tests
-npm run type-check  # Type checking
-npm run lint        # Linting
+npm install && npm run build   # build
+npm test                       # unit + integration tests
+npm run lint && npm run type-check
 ```
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for more details.
+See [CONTRIBUTING.md](CONTRIBUTING.md). Bugs and feature requests go in [Issues](https://github.com/1luvc0d3/metabase-mcp/issues); questions, feedback and production stories in [Discussions](https://github.com/1luvc0d3/metabase-mcp/discussions). If it's useful to you, a ⭐ helps.
 
 ## License
 
