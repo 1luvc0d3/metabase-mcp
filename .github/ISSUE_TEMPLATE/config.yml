@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/1luvc0d3/metabase-mcp/security/advisories/new
+    about: Report privately. Please don't open a public issue.
+  - name: Ask a question
+    url: https://github.com/1luvc0d3/metabase-mcp/discussions/categories/q-a
+    about: Setup help and "how do I ..." questions
+  - name: Troubleshooting guide
+    url: https://github.com/1luvc0d3/metabase-mcp/blob/main/docs/troubleshooting.md
+    about: Fixes for common connection, auth and permission problems

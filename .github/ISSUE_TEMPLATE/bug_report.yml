@@ -1,0 +1,92 @@
+name: Bug report
+description: Something in metabase-mcp doesn't work as documented
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. **Security problems** (auth bypass, guardrail bypass, leaked secrets) go to [private vulnerability reporting](https://github.com/1luvc0d3/metabase-mcp/security/advisories/new), not here.
+
+        Never paste API keys, session tokens or bearer tokens. Replace them with `***`.
+  - type: input
+    id: version
+    attributes:
+      label: metabase-mcp version
+      description: The npm package version, the `.mcpb` file name, the Docker image tag, or `version` from the HTTP server's `/health`
+      placeholder: "1.8.0"
+    validations:
+      required: true
+  - type: input
+    id: metabase-version
+    attributes:
+      label: Metabase version
+      description: Shown under **Admin** > **Troubleshooting**
+      placeholder: "v0.65.2"
+    validations:
+      required: true
+  - type: dropdown
+    id: setup
+    attributes:
+      label: How are you running it?
+      options:
+        - npx / npm (stdio)
+        - Claude Desktop extension (.mcpb)
+        - Docker, shared mode (MCP_AUTH_TOKENS)
+        - Docker, passthrough mode (MCP_AUTH_MODE=passthrough)
+        - HTTP transport without Docker
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: client
+    attributes:
+      label: MCP client
+      placeholder: "Claude Code, Claude Desktop, a claude.ai connector, Cursor, ..."
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: MCP_MODE
+      options:
+        - read
+        - write
+        - full
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Include the tool name and the arguments it was called with, if you know them
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Set MCP_MODE=read and ...
+        2. Ask "..."
+        3. ...
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or error output
+      description: Server stderr, with `LOG_LEVEL=debug` if you can. Remove credentials and any query results you can't share.
+      render: text
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I removed API keys, tokens and private data from everything above
+          required: true
+        - label: I checked [troubleshooting](https://github.com/1luvc0d3/metabase-mcp/blob/main/docs/troubleshooting.md) and existing issues
+          required: true
