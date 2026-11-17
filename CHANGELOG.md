@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.0](https://github.com/1luvc0d3/metabase-mcp/compare/v1.6.1...v1.7.0) (2026-11-17)
+
+
+### Features
+
+* add Docker image for a shared multi-user HTTP server ([#84](https://github.com/1luvc0d3/metabase-mcp/issues/84)) ([2afbd4b](https://github.com/1luvc0d3/metabase-mcp/commit/2afbd4bc341cdaf7db7184e4ddd61b8b8f8420b2))
+
 ## [1.6.1](https://github.com/1luvc0d3/metabase-mcp/compare/v1.6.0...v1.6.1) (2026-11-16)
 
 
