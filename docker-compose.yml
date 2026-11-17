@@ -1,0 +1,17 @@
+# Shared Metabase MCP server. Copy .env.example to .env, fill it in, then:
+#   docker compose up -d
+# Users connect to http://<host>:3000/mcp with their own bearer token. See docs/docker.md.
+services:
+  metabase-mcp:
+    image: ghcr.io/1luvc0d3/metabase-mcp:latest
+    # To build from a checkout instead of pulling, uncomment and run: docker compose up -d --build
+    # build: .
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "${MCP_PUBLISH_PORT:-3000}:3000"
+    volumes:
+      - audit:/data
+
+volumes:
+  audit:

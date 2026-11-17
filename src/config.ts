@@ -84,6 +84,9 @@ export const AppConfigSchema = z.object({
     host: z.string().default('127.0.0.1'),
     corsOrigin: z.string().optional(),
     authToken: z.string().optional(),
+    authTokens: z.record(z.string(), z.string()).optional(),
+    sessionIdleMinutes: z.number().min(1).default(30),
+    allowUnauthenticated: z.boolean().default(false),
   }).prefault({}),
 });
 
@@ -148,6 +151,9 @@ export function loadConfig(): AppConfig {
         host: process.env.MCP_HTTP_HOST || '127.0.0.1',
         corsOrigin: process.env.MCP_CORS_ORIGIN || undefined,
         authToken: process.env.MCP_AUTH_TOKEN || undefined,
+        authTokens: parseAuthTokens(process.env.MCP_AUTH_TOKENS),
+        sessionIdleMinutes: parseIntOrDefault(process.env.MCP_SESSION_IDLE_MINUTES, 30),
+        allowUnauthenticated: process.env.MCP_ALLOW_UNAUTHENTICATED === 'true',
       },
     };
 
@@ -173,6 +179,39 @@ function parseIntOrDefault(value: string | undefined, defaultValue: number): num
   if (!value) return defaultValue;
   const parsed = parseInt(value, 10);
   return isNaN(parsed) ? defaultValue : parsed;
+}
+
+/**
+ * Parse MCP_AUTH_TOKENS: comma-separated `name:token` pairs. Names label audit events and
+ * rate-limit buckets; tokens may themselves contain ':'.
+ */
+export function parseAuthTokens(value: string | undefined): Record<string, string> | undefined {
+  if (!value) return undefined;
+  const tokens: Record<string, string> = {};
+  const seen = new Set<string>();
+  for (const entry of value.split(',').map(s => s.trim()).filter(Boolean)) {
+    const sep = entry.indexOf(':');
+    const name = sep > 0 ? entry.slice(0, sep).trim() : '';
+    const token = sep > 0 ? entry.slice(sep + 1).trim() : '';
+    if (!name || !token) {
+      throw new ConfigurationError(
+        'MCP_AUTH_TOKENS entries must look like name:token (comma-separated)',
+        'http.authTokens'
+      );
+    }
+    if (name in tokens) {
+      throw new ConfigurationError(`MCP_AUTH_TOKENS has duplicate name "${name}"`, 'http.authTokens');
+    }
+    if (seen.has(token)) {
+      throw new ConfigurationError(
+        `MCP_AUTH_TOKENS gives the same token to more than one name ("${name}")`,
+        'http.authTokens'
+      );
+    }
+    tokens[name] = token;
+    seen.add(token);
+  }
+  return Object.keys(tokens).length ? tokens : undefined;
 }
 
 function parseArrayOrDefault(value: string | undefined, defaultValue: string[] | undefined): string[] | undefined {

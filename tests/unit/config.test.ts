@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { AppConfigSchema, loadConfig, validateConfig, Logger, type LogLevel } from '../../src/config.js';
+import { AppConfigSchema, loadConfig, validateConfig, parseAuthTokens, Logger, type LogLevel } from '../../src/config.js';
 import { ConfigurationError } from '../../src/utils/errors.js';
 import { silenceConsole, restoreConsole } from '../setup.js';
 
@@ -1140,5 +1140,72 @@ describe('AppConfigSchema nested defaults', () => {
 
   it('defaults tool access to no allow/deny lists', () => {
     expect(parsed.tools).toEqual({});
+  });
+});
+
+// ============================================================================
+// HTTP auth tokens
+// ============================================================================
+
+describe('parseAuthTokens()', () => {
+  it('returns undefined when unset or empty', () => {
+    expect(parseAuthTokens(undefined)).toBeUndefined();
+    expect(parseAuthTokens(' , ')).toBeUndefined();
+  });
+
+  it('parses comma-separated name:token pairs', () => {
+    expect(parseAuthTokens('alice:tok-a, bob:tok-b')).toEqual({ alice: 'tok-a', bob: 'tok-b' });
+  });
+
+  it('keeps colons inside the token', () => {
+    expect(parseAuthTokens('ci:abc:def')).toEqual({ ci: 'abc:def' });
+  });
+
+  it('rejects entries without a name or token', () => {
+    expect(() => parseAuthTokens('justatoken')).toThrow(ConfigurationError);
+    expect(() => parseAuthTokens(':tok')).toThrow(ConfigurationError);
+    expect(() => parseAuthTokens('alice:')).toThrow(ConfigurationError);
+  });
+
+  it('rejects duplicate names and reused tokens', () => {
+    expect(() => parseAuthTokens('alice:a,alice:b')).toThrow(/duplicate name/);
+    expect(() => parseAuthTokens('alice:same,bob:same')).toThrow(/same token/);
+  });
+
+  it('error messages never include a token', () => {
+    expect(() => parseAuthTokens('alice:secret-value,bob:secret-value'))
+      .toThrow(expect.objectContaining({ message: expect.not.stringContaining('secret-value') }));
+    expect(() => parseAuthTokens('alice:secret-value,alice:other'))
+      .toThrow(expect.objectContaining({ message: expect.not.stringContaining('secret-value') }));
+  });
+});
+
+describe('HTTP config from env', () => {
+  const originalEnv = { ...process.env };
+  afterEach(() => {
+    process.env = { ...originalEnv };
+  });
+
+  it('reads tokens, idle timeout and the unauthenticated override', () => {
+    process.env.METABASE_URL = 'https://metabase.example.com';
+    process.env.METABASE_API_KEY = 'mb_key';
+    process.env.MCP_AUTH_TOKENS = 'alice:tok-a';
+    process.env.MCP_SESSION_IDLE_MINUTES = '10';
+    process.env.MCP_ALLOW_UNAUTHENTICATED = 'true';
+    const config = loadConfig();
+    expect(config.http.authTokens).toEqual({ alice: 'tok-a' });
+    expect(config.http.sessionIdleMinutes).toBe(10);
+    expect(config.http.allowUnauthenticated).toBe(true);
+  });
+
+  it('defaults to a 30 minute idle timeout and no override', () => {
+    process.env.METABASE_URL = 'https://metabase.example.com';
+    process.env.METABASE_API_KEY = 'mb_key';
+    delete process.env.MCP_AUTH_TOKENS;
+    delete process.env.MCP_SESSION_IDLE_MINUTES;
+    delete process.env.MCP_ALLOW_UNAUTHENTICATED;
+    const config = loadConfig();
+    expect(config.http.sessionIdleMinutes).toBe(30);
+    expect(config.http.allowUnauthenticated).toBe(false);
   });
 });

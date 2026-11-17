@@ -42,6 +42,39 @@ jobs:
       - name: Run tests
         run: npm test
 
+  # Builds the image and checks it starts, answers /health, and enforces auth
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build image
+        run: docker build -t metabase-mcp:ci .
+
+      - name: Refuses to start without auth tokens
+        run: |
+          if docker run --rm -e METABASE_URL=http://metabase.invalid -e METABASE_API_KEY=x metabase-mcp:ci; then
+            echo "::error::container started on 0.0.0.0 without auth"; exit 1
+          fi
+
+      - name: Starts with tokens and enforces them
+        run: |
+          docker run -d --name mcp -p 3000:3000 \
+            -e METABASE_URL=http://metabase.invalid -e METABASE_API_KEY=x \
+            -e MCP_AUTH_TOKENS=ci:ci-token-0123456789 metabase-mcp:ci
+          for _ in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:3000/health; then break; fi
+            sleep 1
+          done
+          curl -sf http://127.0.0.1:3000/health
+          status=$(curl -s -o /dev/null -w '%{http_code}' -X POST http://127.0.0.1:3000/mcp)
+          test "$status" = 401 || { echo "::error::expected 401 without token, got $status"; exit 1; }
+          test "$(docker inspect -f '{{.Config.User}}' mcp)" = node
+
+      - name: Container logs
+        if: always()
+        run: docker logs mcp || true
+
   # PRs are squash-merged and the PR title becomes the commit on main, which release-please
   # reads to decide the next version. Skipped (and so passing) outside pull_request events.
   pr-title:

@@ -274,7 +274,14 @@ export interface HttpTransportConfig {
   port: number;
   host: string;
   corsOrigin?: string;
+  /** Single shared token (MCP_AUTH_TOKEN); treated as a user named "default" */
   authToken?: string;
+  /** Named per-user tokens (MCP_AUTH_TOKENS="alice:tok1,bob:tok2"), name -> token */
+  authTokens?: Record<string, string>;
+  /** Close sessions with no requests for this many minutes */
+  sessionIdleMinutes: number;
+  /** Allow listening on a non-loopback host with no auth token */
+  allowUnauthenticated: boolean;
 }
 
 export interface RedactionConfig {

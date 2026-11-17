@@ -54,6 +54,14 @@ claude mcp add metabase \
 }
 ```
 
+**Shared server for a team (Docker):** run one container with one Metabase API key and give each person their own token. Policy, audit log and rate limits live on the server. → [docs/docker.md](docs/docker.md)
+
+```bash
+docker run -d -p 3000:3000 -e METABASE_URL=... -e METABASE_API_KEY=... \
+  -e MCP_AUTH_TOKENS=alice:<token>,bob:<token> ghcr.io/1luvc0d3/metabase-mcp:latest
+claude mcp add --transport http metabase http://<host>:3000/mcp --header "Authorization: Bearer <token>"
+```
+
 Then ask something like *"What dashboards do we have about customer retention?"*
 
 ## Configuration

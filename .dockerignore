@@ -1,0 +1,6 @@
+# Only package files, tsconfig.json and src/ are copied into the image
+*
+!package.json
+!package-lock.json
+!tsconfig.json
+!src/

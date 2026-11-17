@@ -109,6 +109,7 @@ export class RateLimiter {
  */
 export class TieredRateLimiter {
   private limiters: Map<string, RateLimiter> = new Map();
+  private readonly tiers: Record<string, RateLimitConfig>;
 
   constructor(
     tiers: Record<string, RateLimitConfig> = {
@@ -117,9 +118,17 @@ export class TieredRateLimiter {
       nlq: { requestsPerMinute: 20 },
     }
   ) {
+    this.tiers = tiers;
     for (const [tier, config] of Object.entries(tiers)) {
       this.limiters.set(tier, new RateLimiter(config));
     }
+  }
+
+  /**
+   * A new limiter with the same tiers and empty windows (one per user on a shared server)
+   */
+  createSibling(): TieredRateLimiter {
+    return new TieredRateLimiter(this.tiers);
   }
 
   /**

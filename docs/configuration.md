@@ -21,6 +21,10 @@ Set environment variables or create a `.env` file (see [`.env.example`](../.env.
 | `RATE_LIMIT_WRITE_PER_MINUTE` | No | `30` | Write-tier rate limit |
 | `RATE_LIMIT_LLM_PER_MINUTE` | No | `20` | LLM-tier rate limit |
 | `RATE_LIMIT_REQUESTS_PER_MINUTE` | No | - | Legacy: sets the read tier when `RATE_LIMIT_READ_PER_MINUTE` is unset |
+| `MCP_TRANSPORT` | No | `stdio` | `stdio`, or `http` to serve Streamable HTTP at `/mcp` (see [docker.md](docker.md)) |
+| `MCP_HTTP_HOST` / `MCP_HTTP_PORT` | No | `127.0.0.1` / `3000` | HTTP bind address and port |
+| `MCP_AUTH_TOKENS` | No | - | HTTP only: comma-separated `name:token` bearer tokens, one per person. Required on a non-localhost address |
+| `MCP_SESSION_IDLE_MINUTES` | No | `30` | HTTP only: close idle sessions after this many minutes |
 
 \* Set one of `METABASE_API_KEY` or `METABASE_SESSION_TOKEN`. If both are set, the API key is used.
 

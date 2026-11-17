@@ -101,6 +101,12 @@ API key authentication via `METABASE_API_KEY`. The key is passed as `X-API-Key` 
 | `ANTHROPIC_API_KEY` | For NLQ/insights | - | Enables NLQ and insight tools |
 | `MCP_REDACT_COLUMNS` | No | - | Column names to redact from query results (`*` wildcard) |
 | `MCP_REDACT_MODE` | No | `mask` | `mask` or `drop` |
+| `MCP_TRANSPORT` | No | `stdio` | `http` serves Streamable HTTP (`src/transport/http-transport.ts`) |
+| `MCP_AUTH_TOKENS` | HTTP off-localhost | - | `name:token` pairs; per-user rate limits, audit `actor`, session ownership |
+
+### Shared server (Docker)
+
+`Dockerfile` + `docker-compose.yml` run the HTTP transport for a team (docs/docker.md). One Metabase API key is shared; each person has a bearer token. `createHttpApp()` builds the app without listening, so tests drive it with the SDK client on port 0 (needs local port binding, which the Claude Code sandbox blocks). CI builds the image and checks it refuses to start without tokens; releases push a multi-arch image to GHCR.
 
 ## Server Modes
 

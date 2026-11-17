@@ -286,3 +286,13 @@ describe('TieredRateLimiter', () => {
     });
   });
 });
+
+describe('TieredRateLimiter.createSibling()', () => {
+  it('has the same tiers but its own windows', () => {
+    const original = new TieredRateLimiter({ read: { requestsPerMinute: 1 } });
+    original.checkLimit('read');
+    const sibling = original.createSibling();
+    expect(sibling.getRemainingRequests('read')).toBe(1);
+    expect(original.getRemainingRequests('read')).toBe(0);
+  });
+});
