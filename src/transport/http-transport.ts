@@ -1,4 +1,4 @@
-import { createHash, randomUUID, timingSafeEqual } from 'node:crypto';
+import { createHmac, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import type { Server } from 'node:http';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
@@ -66,8 +66,16 @@ export interface HttpApp {
 
 const LOOPBACK_HOSTS = new Set(['127.0.0.1', 'localhost', '::1']);
 
+/**
+ * Keyed digest of a secret (server token or Metabase credential), used only in memory for
+ * constant-time comparison and as a map key. The key is random per process, so a digest
+ * that leaks (a heap dump, say) can't be checked against guesses, and the raw secret
+ * never needs to be kept for comparison.
+ */
+const DIGEST_KEY = randomBytes(32);
+
 function digest(value: string): Buffer {
-  return createHash('sha256').update(value).digest();
+  return createHmac('sha256', DIGEST_KEY).update(value).digest();
 }
 
 /**
