@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.8.0](https://github.com/1luvc0d3/metabase-mcp/compare/v1.7.0...v1.8.0) (2026-11-17)
+
+
+### Features
+
+* add passthrough auth so each user brings their own Metabase credential ([#86](https://github.com/1luvc0d3/metabase-mcp/issues/86)) ([3738e26](https://github.com/1luvc0d3/metabase-mcp/commit/3738e26f2d84ee92b5c725478d7d04da98fe232f))
+* throttle failed passthrough credential checks per client IP ([#88](https://github.com/1luvc0d3/metabase-mcp/issues/88)) ([0ade6d3](https://github.com/1luvc0d3/metabase-mcp/commit/0ade6d33847617f3ebd2dd5ae3fec12f05c96e8c))
+
 ## [1.7.0](https://github.com/1luvc0d3/metabase-mcp/compare/v1.6.1...v1.7.0) (2026-11-17)
 
 
