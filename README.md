@@ -131,7 +131,7 @@ npm test                       # unit + integration tests
 npm run lint && npm run type-check
 ```
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). Bugs and feature requests go in [Issues](https://github.com/1luvc0d3/metabase-mcp/issues); questions, feedback and production stories in [Discussions](https://github.com/1luvc0d3/metabase-mcp/discussions). If it's useful to you, a ⭐ helps.
+See [CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md). Bugs and feature requests go in [Issues](https://github.com/1luvc0d3/metabase-mcp/issues); questions, feedback and production stories in [Discussions](https://github.com/1luvc0d3/metabase-mcp/discussions). If it's useful to you, a ⭐ helps.
 
 ## License
 

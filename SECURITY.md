@@ -2,11 +2,12 @@
 
 ## Supported Versions
 
-Only the latest minor version receives security updates.
+Only the latest minor release receives security fixes. Upgrade to it to get them; releases are listed on the [releases page](https://github.com/1luvc0d3/metabase-mcp/releases).
 
 | Version | Supported |
 |---------|:---------:|
-| 1.0.x   | Yes       |
+| Latest 1.x minor | Yes |
+| Older 1.x minors | No |
 | < 1.0   | No        |
 
 ## Reporting a Vulnerability

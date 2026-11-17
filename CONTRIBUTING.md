@@ -2,6 +2,8 @@
 
 Thanks for your interest in contributing! Here's how to get started.
 
+By taking part you agree to follow the [Code of Conduct](CODE_OF_CONDUCT.md). Use the [issue forms](https://github.com/1luvc0d3/metabase-mcp/issues/new/choose) for bugs and feature requests, [Discussions](https://github.com/1luvc0d3/metabase-mcp/discussions) for questions, and [private vulnerability reporting](SECURITY.md) for security problems.
+
 ## Development Setup
 
 1. Clone the repo:

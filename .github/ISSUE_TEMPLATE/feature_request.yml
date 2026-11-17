@@ -1,0 +1,41 @@
+name: Feature request
+description: Suggest a new tool, option or improvement
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do?
+      description: The problem or workflow, not the solution. "When I ask Claude to ..., it can't ... because ..."
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would help?
+      description: A new tool, an option, a change to an existing tool, ...
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What have you tried instead?
+      description: Workarounds, or other MCP servers including Metabase's official one
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Read tools (dashboards, cards, queries)
+        - Write tools (create, update, delete)
+        - Security (guardrails, redaction, access control, audit)
+        - Shared server / Docker / HTTP
+        - NLQ and insights
+        - Setup and docs
+        - Other
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: Contributing
+      options:
+        - label: I'd like to open a pull request for this
