@@ -54,7 +54,7 @@ claude mcp add metabase \
 }
 ```
 
-**Shared server for a team (Docker):** run one container with one Metabase API key and give each person their own token. Policy, audit log and rate limits live on the server. → [docs/docker.md](docs/docker.md)
+**Shared server for a team (Docker):** run one container and either share one Metabase API key (each person gets a token) or let each person bring their own Metabase credential so Metabase permissions apply per person (`MCP_AUTH_MODE=passthrough`). Policy, audit log and rate limits live on the server. → [docs/docker.md](docs/docker.md)
 
 ```bash
 docker run -d -p 3000:3000 -e METABASE_URL=... -e METABASE_API_KEY=... \

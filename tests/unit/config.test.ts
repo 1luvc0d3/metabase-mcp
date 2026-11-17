@@ -1209,3 +1209,48 @@ describe('HTTP config from env', () => {
     expect(config.http.allowUnauthenticated).toBe(false);
   });
 });
+
+describe('MCP_AUTH_MODE=passthrough', () => {
+  const originalEnv = { ...process.env };
+  beforeEach(() => {
+    for (const k of Object.keys(process.env)) {
+      if (k.startsWith('MCP_') || k.startsWith('METABASE_')) delete process.env[k];
+    }
+    process.env.METABASE_URL = 'https://metabase.example.com';
+    process.env.MCP_AUTH_MODE = 'passthrough';
+    process.env.MCP_TRANSPORT = 'http';
+  });
+  afterEach(() => {
+    process.env = { ...originalEnv };
+  });
+
+  it('loads without a server-side Metabase credential', () => {
+    const config = loadConfig();
+    expect(config.http.authMode).toBe('passthrough');
+    expect(config.metabase.apiKey).toBeUndefined();
+  });
+
+  it('defaults to shared', () => {
+    delete process.env.MCP_AUTH_MODE;
+    process.env.METABASE_API_KEY = 'mb_key';
+    expect(loadConfig().http.authMode).toBe('shared');
+  });
+
+  it('requires the HTTP transport', () => {
+    process.env.MCP_TRANSPORT = 'stdio';
+    expect(() => loadConfig()).toThrow(/requires MCP_TRANSPORT=http/);
+  });
+
+  it('refuses a server-side API key or session token', () => {
+    process.env.METABASE_API_KEY = 'mb_key';
+    expect(() => loadConfig()).toThrow(/unset METABASE_API_KEY/);
+    delete process.env.METABASE_API_KEY;
+    process.env.METABASE_SESSION_TOKEN = 'sess';
+    expect(() => loadConfig()).toThrow(/unset METABASE_API_KEY/);
+  });
+
+  it('refuses server bearer tokens', () => {
+    process.env.MCP_AUTH_TOKENS = 'alice:tok';
+    expect(() => loadConfig()).toThrow(/can't be combined/);
+  });
+});

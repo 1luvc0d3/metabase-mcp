@@ -87,7 +87,21 @@ export const AppConfigSchema = z.object({
     authTokens: z.record(z.string(), z.string()).optional(),
     sessionIdleMinutes: z.number().min(1).default(30),
     allowUnauthenticated: z.boolean().default(false),
+    authMode: z.enum(['shared', 'passthrough']).default('shared'),
   }).prefault({}),
+}).superRefine((config, ctx) => {
+  if (config.http.authMode !== 'passthrough') return;
+  const fail = (message: string) => ctx.addIssue({ code: 'custom', path: ['http', 'authMode'], message });
+  if (config.transport !== 'http') {
+    fail('MCP_AUTH_MODE=passthrough requires MCP_TRANSPORT=http');
+  }
+  // A server-side credential would be a fallback for requests that carry none
+  if (config.metabase.apiKey || config.metabase.sessionToken) {
+    fail('MCP_AUTH_MODE=passthrough: unset METABASE_API_KEY and METABASE_SESSION_TOKEN; each user sends their own');
+  }
+  if (config.http.authToken || config.http.authTokens) {
+    fail('MCP_AUTH_MODE=passthrough can\'t be combined with MCP_AUTH_TOKEN(S); Metabase authenticates each user');
+  }
 });
 
 // ============================================================================
@@ -154,6 +168,7 @@ export function loadConfig(): AppConfig {
         authTokens: parseAuthTokens(process.env.MCP_AUTH_TOKENS),
         sessionIdleMinutes: parseIntOrDefault(process.env.MCP_SESSION_IDLE_MINUTES, 30),
         allowUnauthenticated: process.env.MCP_ALLOW_UNAUTHENTICATED === 'true',
+        authMode: (process.env.MCP_AUTH_MODE || undefined) as 'shared' | 'passthrough' | undefined,
       },
     };
 

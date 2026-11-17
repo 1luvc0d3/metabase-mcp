@@ -103,10 +103,11 @@ API key authentication via `METABASE_API_KEY`. The key is passed as `X-API-Key` 
 | `MCP_REDACT_MODE` | No | `mask` | `mask` or `drop` |
 | `MCP_TRANSPORT` | No | `stdio` | `http` serves Streamable HTTP (`src/transport/http-transport.ts`) |
 | `MCP_AUTH_TOKENS` | HTTP off-localhost | - | `name:token` pairs; per-user rate limits, audit `actor`, session ownership |
+| `MCP_AUTH_MODE` | No | `shared` | `passthrough`: each request carries the caller's Metabase credential; no server-side key |
 
 ### Shared server (Docker)
 
-`Dockerfile` + `docker-compose.yml` run the HTTP transport for a team (docs/docker.md). One Metabase API key is shared; each person has a bearer token. `createHttpApp()` builds the app without listening, so tests drive it with the SDK client on port 0 (needs local port binding, which the Claude Code sandbox blocks). CI builds the image and checks it refuses to start without tokens; releases push a multi-arch image to GHCR.
+`Dockerfile` + `docker-compose.yml` run the HTTP transport for a team (docs/docker.md). Shared mode: one Metabase API key, a bearer token per person. Passthrough mode: each request carries the caller's own Metabase credential, verified via `GET /api/user/current` when the session opens; `index.ts` passes a `createMetabaseClient` factory so per-user clients keep the column redactor, and each credential gets its own `SchemaManager`. `createHttpApp()` builds the app without listening, so tests drive it with the SDK client on port 0 (needs local port binding, which the Claude Code sandbox blocks). CI builds the image and checks it refuses to start without tokens; releases push a multi-arch image to GHCR.
 
 ## Server Modes
 

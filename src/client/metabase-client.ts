@@ -5,6 +5,7 @@
 
 import type {
   MetabaseConfig,
+  MetabaseCurrentUser,
   Database,
   DatabaseMetadata,
   Dashboard,
@@ -144,6 +145,19 @@ export class MetabaseClient {
     }
 
     return headers;
+  }
+
+  // ============================================================================
+  // Identity
+  // ============================================================================
+
+  /**
+   * The Metabase user these credentials act as. An API key acts as a synthetic user named
+   * after the key, with an `@api-key.invalid` email.
+   */
+  async getCurrentUser(): Promise<MetabaseCurrentUser> {
+    const user = await this.request<MetabaseCurrentUser>('/user/current');
+    return { id: user.id, email: user.email, common_name: user.common_name };
   }
 
   // ============================================================================
