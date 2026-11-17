@@ -25,6 +25,8 @@ Set environment variables or create a `.env` file (see [`.env.example`](../.env.
 | `MCP_HTTP_HOST` / `MCP_HTTP_PORT` | No | `127.0.0.1` / `3000` | HTTP bind address and port |
 | `MCP_AUTH_MODE` | No | `shared` | HTTP only: `shared` (server's Metabase credential) or `passthrough` (each person sends their own; see [docker.md](docker.md#passthrough)) |
 | `MCP_AUTH_TOKENS` | No | - | HTTP only: comma-separated `name:token` bearer tokens, one per person. Required on a non-localhost address |
+| `MCP_AUTH_FAILURES_PER_MINUTE` | No | `10` | HTTP passthrough only: failed credential checks per client IP per minute before `429` (`0` disables) |
+| `MCP_TRUST_PROXY` | No | - | HTTP only: Express `trust proxy` (`true`, hop count, or addresses), so client IPs come from `X-Forwarded-For` behind a reverse proxy |
 | `MCP_SESSION_IDLE_MINUTES` | No | `30` | HTTP only: close idle sessions after this many minutes |
 
 \* Set one of `METABASE_API_KEY` or `METABASE_SESSION_TOKEN`. If both are set, the API key is used.

@@ -88,6 +88,8 @@ export const AppConfigSchema = z.object({
     sessionIdleMinutes: z.number().min(1).default(30),
     allowUnauthenticated: z.boolean().default(false),
     authMode: z.enum(['shared', 'passthrough']).default('shared'),
+    authFailuresPerMinute: z.number().min(0).default(10),
+    trustProxy: z.union([z.boolean(), z.number(), z.string()]).optional(),
   }).prefault({}),
 }).superRefine((config, ctx) => {
   if (config.http.authMode !== 'passthrough') return;
@@ -169,6 +171,8 @@ export function loadConfig(): AppConfig {
         sessionIdleMinutes: parseIntOrDefault(process.env.MCP_SESSION_IDLE_MINUTES, 30),
         allowUnauthenticated: process.env.MCP_ALLOW_UNAUTHENTICATED === 'true',
         authMode: (process.env.MCP_AUTH_MODE || undefined) as 'shared' | 'passthrough' | undefined,
+        authFailuresPerMinute: parseIntOrDefault(process.env.MCP_AUTH_FAILURES_PER_MINUTE, 10),
+        trustProxy: parseTrustProxy(process.env.MCP_TRUST_PROXY),
       },
     };
 
@@ -194,6 +198,19 @@ function parseIntOrDefault(value: string | undefined, defaultValue: number): num
   if (!value) return defaultValue;
   const parsed = parseInt(value, 10);
   return isNaN(parsed) ? defaultValue : parsed;
+}
+
+/**
+ * Parse MCP_TRUST_PROXY into an Express `trust proxy` value. Express reads the *string*
+ * "true" as a list of addresses (trusting nothing), so booleans and hop counts are converted;
+ * anything else (CIDR list, "loopback", ...) passes through.
+ */
+export function parseTrustProxy(value: string | undefined): boolean | number | string | undefined {
+  const v = value?.trim();
+  if (!v || v === 'false') return undefined;
+  if (v === 'true') return true;
+  if (/^\d+$/.test(v)) return parseInt(v, 10);
+  return v;
 }
 
 /**
