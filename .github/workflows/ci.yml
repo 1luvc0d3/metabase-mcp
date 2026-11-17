@@ -53,9 +53,10 @@ jobs:
 
       - name: Refuses to start without auth tokens
         run: |
-          if docker run --rm -e METABASE_URL=http://metabase.invalid -e METABASE_API_KEY=x metabase-mcp:ci; then
+          if out=$(docker run --rm -e METABASE_URL=http://metabase.invalid -e METABASE_API_KEY=x metabase-mcp:ci 2>&1); then
             echo "::error::container started on 0.0.0.0 without auth"; exit 1
           fi
+          echo "$out" | grep -q "Refusing to listen" || { echo "$out"; echo "::error::container failed for another reason"; exit 1; }
 
       - name: Starts with tokens and enforces them
         run: |
