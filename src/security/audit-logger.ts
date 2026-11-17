@@ -13,6 +13,8 @@ export interface AuditEvent {
   result: 'success' | 'failure' | 'blocked';
   riskLevel: 'low' | 'medium' | 'high';
   durationMs?: number;
+  /** Who made the call: the named HTTP auth token, when the server is shared */
+  actor?: string;
 }
 
 export interface AuditLoggerConfig {
@@ -23,10 +25,12 @@ export interface AuditLoggerConfig {
 export class AuditLogger {
   private logFile: string | null;
   private alertOnHighRisk: boolean;
+  private readonly actor?: string;
 
-  constructor(config: AuditLoggerConfig = {}) {
+  constructor(config: AuditLoggerConfig = {}, actor?: string) {
     this.logFile = config.logFile ?? null;
     this.alertOnHighRisk = config.alertOnHighRisk ?? true;
+    this.actor = actor;
 
     // Ensure log directory and file exist with secure permissions
     if (this.logFile) {
@@ -41,11 +45,22 @@ export class AuditLogger {
   }
 
   /**
+   * A logger that writes to the same file and stamps every event with `actor`
+   */
+  withActor(actor: string): AuditLogger {
+    return new AuditLogger(
+      { logFile: this.logFile ?? undefined, alertOnHighRisk: this.alertOnHighRisk },
+      actor
+    );
+  }
+
+  /**
    * Log an audit event
    */
   log(event: Omit<AuditEvent, 'timestamp'>): void {
     const fullEvent: AuditEvent = {
       ...event,
+      ...(this.actor !== undefined && event.actor === undefined ? { actor: this.actor } : {}),
       timestamp: new Date(),
     };
 
