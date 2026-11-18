@@ -45,7 +45,7 @@
   "author": "PyMlandBeyond",
   "license": "MIT",
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=22.12.0"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.52.0",
@@ -55,11 +55,11 @@
   },
   "devDependencies": {
     "@types/express": "^5.0.0",
-    "@types/node": "^20.0.0",
+    "@types/node": "^22.20.5",
     "@typescript-eslint/eslint-plugin": "^8.73.0",
     "@typescript-eslint/parser": "^8.73.0",
     "eslint": "^9.0.0",
     "typescript": "^5.0.0",
-    "vitest": "^4.0.0"
+    "vitest": "^5.1.0"
   }
 }
