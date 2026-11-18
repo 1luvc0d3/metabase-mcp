@@ -38,6 +38,9 @@ updates:
       # ESLint 10 needs a config migration; do it deliberately rather than via Dependabot.
       - dependency-name: eslint
         update-types: ['version-update:semver-major']
+      # typescript-eslint 8.x supports TypeScript < 6.1 only (#78). Drop this once it supports 7.
+      - dependency-name: typescript
+        versions: ['>=7.0.0']
 
   - package-ecosystem: github-actions
     directory: /
