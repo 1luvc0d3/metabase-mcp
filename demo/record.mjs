@@ -209,12 +209,24 @@ async function recordBrowser(scenario, browser) {
   await page.goto(`${state.metabaseUrl}${path}`, { waitUntil: 'networkidle' });
   // Let the chart draw, then hold on it.
   await page.waitForTimeout(6000);
+  // Zoom onto the first dashboard card (plus the dashboard title above it): on a 1080p page a
+  // single card is a small tile surrounded by empty space.
+  const card = await page.locator('.react-grid-item').first().boundingBox().catch(() => null);
   const video = page.video();
   await context.close();
   const webm = await video.path();
   const clip = join(clipsDir, `${scenario.order}-${scenario.id}-2browser.mp4`);
+  const pre = [];
+  if (card) {
+    const pad = 40;
+    const x = Math.max(0, Math.floor(card.x - pad));
+    const y = Math.max(0, Math.floor(card.y - 110)); // include the dashboard title
+    const w = Math.min(W - x, Math.ceil(card.width + 2 * pad));
+    const h = Math.min(H - y, Math.ceil(card.y + card.height + pad - y));
+    pre.push(`crop=${w - (w % 2)}:${h - (h % 2)}:${x}:${y}`);
+  }
   // Trim the blank first second of page load.
-  await run('ffmpeg', ['-y', '-loglevel', 'error', '-ss', '1', '-i', webm, ...encodeArgs(), clip]);
+  await run('ffmpeg', ['-y', '-loglevel', 'error', '-ss', '1', '-i', webm, ...encodeArgs(pre), clip]);
   return clip;
 }
 
@@ -238,9 +250,9 @@ async function titleCard(card, browser) {
   return clip;
 }
 
-function encodeArgs() {
+function encodeArgs(pre = []) {
   return [
-    '-vf', `scale=${W}:${H}:force_original_aspect_ratio=decrease,pad=${W}:${H}:(ow-iw)/2:(oh-ih)/2:color=#16161e,fps=${FPS},format=yuv420p`,
+    '-vf', `${pre.map((f) => `${f},`).join('')}scale=${W}:${H}:force_original_aspect_ratio=decrease,pad=${W}:${H}:(ow-iw)/2:(oh-ih)/2:color=#16161e,fps=${FPS},format=yuv420p`,
     '-c:v', 'libx264', '-preset', 'medium', '-crf', '20', '-an',
   ];
 }

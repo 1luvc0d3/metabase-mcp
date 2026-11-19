@@ -58,8 +58,16 @@ export const scenarios = [
       expect(dash, "no 'Growth' dashboard in Metabase");
       const full = await metabaseApi(state, `/dashboard/${dash.id}`);
       const cards = full.dashcards ?? full.ordered_cards ?? [];
-      expect(cards.some((dc) => dc.card?.name === 'Orders per Month'), "'Orders per Month' is not on the dashboard");
-      return `dashboard ${dash.id}`;
+      const dashcard = cards.find((dc) => dc.card?.name === 'Orders per Month');
+      expect(dashcard, "'Orders per Month' is not on the dashboard");
+      // create_card saves SQL without running it, so a card can "succeed" and still be broken
+      // (e.g. DATE_TRUNC on the SQLite sample database). Run it the way the dashboard will.
+      const result = await metabaseApi(state, `/card/${dashcard.card.id}/query`, { method: 'POST' }).catch((e) => ({
+        error: e.message.replace(/^.*?"error":"([^"]+)".*$/s, '$1'),
+      }));
+      expect(!result.error && result.status === 'completed', `the card's query fails in Metabase: ${String(result.error).slice(0, 160)}`);
+      expect(result.row_count > 0, "the card's query returns no rows");
+      return `dashboard ${dash.id}, card returns ${result.row_count} rows`;
     },
     browserShot: async (state) => {
       const [dash] = await findByName(state, 'dashboard', 'Growth');
