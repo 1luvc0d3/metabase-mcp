@@ -72,6 +72,18 @@ export class SQLValidationError extends Error {
   }
 }
 
+/**
+ * One-line description of an error for tool results. SQL validation failures carry their reasons
+ * ("SQL validation failed: Blocked SQL pattern detected: DROP") so the client can explain the
+ * block or fix its query instead of seeing a bare "failed".
+ */
+export function describeError(error: unknown): string {
+  if (error instanceof SQLValidationError && error.errors.length > 0) {
+    return `${error.message}: ${error.errors.join(', ')}`;
+  }
+  return error instanceof Error ? error.message : String(error);
+}
+
 export class RateLimitError extends Error {
   constructor(
     public readonly retryAfterMs: number

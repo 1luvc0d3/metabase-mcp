@@ -9,7 +9,7 @@ import { z } from 'zod';
 import type { ToolContext } from './types.js';
 import { createCompactTextResponse, createErrorResponse } from './types.js';
 import { formatQueryResult, formatSchemaResult } from '../utils/response-formatter.js';
-import { SQLValidationError } from '../utils/errors.js';
+import { SQLValidationError, describeError } from '../utils/errors.js';
 import {
   BATCHABLE_WRITE_TOOLS,
   executeWriteOperation,
@@ -271,7 +271,7 @@ export function registerWorkflowTools(server: McpServer, ctx: ToolContext): void
               duration_ms: Date.now() - stepStart,
             });
           } catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
+            const message = describeError(error);
             stepResults.push({
               name: step.name,
               tool: step.tool,

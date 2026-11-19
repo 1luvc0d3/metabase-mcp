@@ -15,6 +15,7 @@ import {
   isWriteModeEnabled,
   writeOperationSchemas,
 } from './write-operations.js';
+import { describeError } from '../utils/errors.js';
 
 const MAX_OPERATIONS = 20;
 
@@ -205,8 +206,7 @@ async function executeOperation(
         return { tool: op.tool, success: false, error: `Unknown tool: ${op.tool}` };
     }
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return { tool: op.tool, success: false, error: message };
+    return { tool: op.tool, success: false, error: describeError(error) };
   }
 }
 
@@ -244,7 +244,7 @@ export function registerBatchTools(server: McpServer, ctx: ToolContext): void {
           return {
             tool: ops[i].tool,
             success: false,
-            error: r.reason instanceof Error ? r.reason.message : String(r.reason),
+            error: describeError(r.reason),
           };
         });
 

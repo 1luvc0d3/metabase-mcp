@@ -220,6 +220,7 @@ describe('Batch Tools Integration', () => {
       const data = JSON.parse(result.content[0].text);
       expect(data.failed).toBe(1);
       expect(data.results[0].error).toContain('SQL validation failed');
+      expect(data.results[0].error).toContain('DROP');
       expect(mockClient.createCard).not.toHaveBeenCalled();
     });
 
