@@ -154,6 +154,10 @@ METABASE_URL=http://localhost:3000 npm run test:e2e
 docker rm -f mb-e2e
 ```
 
+### Demo pipeline (real Claude + video)
+
+`demo/` verifies features through a real Claude Code session and records the promo video from the same scenarios (`demo/scenarios.mjs`: prompt, server profile, check on the tool calls). `npm run demo:setup` prepares a throwaway Metabase, `demo:verify` runs each scenario with `claude -p` (stream-json, isolated: `--strict-mcp-config --setting-sources '' --tools ''`) and checks tool calls rather than wording, and `demo:record` films each scenario with VHS, adds Metabase browser shots (Playwright) and title cards, and assembles `demo/.out/metabase-mcp-demo.mp4` with ffmpeg. VHS 0.12 can't `Wait` on text after the output scrolls, so takes run for a fixed window and the idle tail is trimmed from the last changed frame. When a feature is worth showing, add a scenario. See `demo/README.md`.
+
 On a fresh instance the test runs the setup wizard itself (`tests/e2e/metabase-setup.mjs`); against one that's already set up, also pass `E2E_ADMIN_EMAIL` and `E2E_ADMIN_PASSWORD`. The API key it creates is kept in memory and never printed. Each run leaves one fixture card behind; everything else it creates is deleted.
 
 ## Key Patterns
