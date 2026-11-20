@@ -86,7 +86,9 @@ async function sampleDatabaseId(session) {
 
 /**
  * @param {string} metabaseUrl
- * @returns {Promise<{ apiKey: string, paramCardId: number, databaseId: number, version: string }>}
+ * The admin `session` is returned too (in memory) for callers that drive the Metabase UI,
+ * such as the demo recorder's browser shots.
+ * @returns {Promise<{ apiKey: string, paramCardId: number, databaseId: number, version: string, session: string }>}
  */
 export async function prepareMetabase(metabaseUrl) {
   base = metabaseUrl.replace(/\/$/, '');
@@ -122,5 +124,5 @@ export async function prepareMetabase(metabaseUrl) {
     },
   });
 
-  return { apiKey: key.unmasked_key, paramCardId: card.id, databaseId, version };
+  return { apiKey: key.unmasked_key, paramCardId: card.id, databaseId, version, session };
 }
