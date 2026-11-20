@@ -12,6 +12,7 @@ import type { AuditLogger } from '../security/audit-logger.js';
 import type { SchemaManager } from '../utils/schema-manager.js';
 import type { Logger } from '../config.js';
 import type { ToolGate } from '../security/tool-gate.js';
+import { SQLValidationError, describeError } from '../utils/errors.js';
 
 /**
  * Subset of config exposed to tool handlers.
@@ -70,11 +71,13 @@ export function createCompactTextResponse(data: unknown): ToolResponse {
 }
 
 export function createErrorResponse(error: Error | string): ToolResponse {
-  const message = error instanceof Error ? error.message : error;
+  const body = error instanceof SQLValidationError
+    ? { ...error.toJSON(), error: describeError(error) }
+    : { error: describeError(error) };
   return {
     content: [{
       type: 'text' as const,
-      text: JSON.stringify({ error: message }, null, 2),
+      text: JSON.stringify(body, null, 2),
     }],
     isError: true,
   };

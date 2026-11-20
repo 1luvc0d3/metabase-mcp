@@ -231,6 +231,9 @@ describe('Read Tools Integration', () => {
       expect(result.isError).toBe(true);
       const data = JSON.parse(result.content[0].text);
       expect(data.error).toContain('SQL validation failed');
+      // The client needs the reason, not just "failed", to explain the block or fix its SQL.
+      expect(data.error).toContain('DROP');
+      expect(data.validationErrors).toEqual(expect.arrayContaining([expect.stringContaining('DROP')]));
     });
 
     it('blocks SQL injection attempts', async () => {
