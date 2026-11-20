@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.1](https://github.com/1luvc0d3/metabase-mcp/compare/v2.0.0...v2.0.1) (2026-11-20)
+
+
+### Bug Fixes
+
+* include the blocked reason in SQL validation errors ([#97](https://github.com/1luvc0d3/metabase-mcp/issues/97)) ([d6510b4](https://github.com/1luvc0d3/metabase-mcp/commit/d6510b4f1efa7014c0c1d6131974a51696ac7a3a))
+
 ## [2.0.0](https://github.com/1luvc0d3/metabase-mcp/compare/v1.8.0...v2.0.0) (2026-11-18)
 
 
