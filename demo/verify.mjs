@@ -113,7 +113,7 @@ async function main() {
     if (tools) console.log(`      tools: ${tools}`);
   }
 
-  const cell = (s) => String(s).replace(/\|/g, '\\|').replace(/\n/g, ' ').slice(0, 200);
+  const cell = (s) => String(s).replace(/\\/g, '\\\\').replace(/\|/g, '\\|').replace(/\n/g, ' ').slice(0, 200);
   const report = [
     `# Demo verification`,
     '',
