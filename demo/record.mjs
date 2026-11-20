@@ -280,7 +280,8 @@ async function assemble() {
 
 async function main() {
   for (const tool of ['vhs', 'ttyd', 'ffmpeg', 'ffprobe']) {
-    await run('sh', ['-c', `command -v ${tool}`]).catch(() => {
+    // The name goes in as a positional argument, never into the shell string.
+    await run('sh', ['-c', 'command -v "$1"', 'sh', tool]).catch(() => {
       throw new Error(`${tool} not found on PATH (macOS: brew install vhs ffmpeg)`);
     });
   }
