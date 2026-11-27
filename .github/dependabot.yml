@@ -40,6 +40,9 @@ updates:
       # Types must match the oldest supported Node (engines: >=22.12); bump with the engines field.
       - dependency-name: '@types/node'
         update-types: ['version-update:semver-major']
+      # On hold while we decide whether to keep the NLQ/insight tools (#104 closed). Revisit with that.
+      - dependency-name: '@anthropic-ai/sdk'
+        update-types: ['version-update:semver-major']
       # ESLint 10 needs a config migration; do it deliberately rather than via Dependabot.
       - dependency-name: eslint
         update-types: ['version-update:semver-major']
