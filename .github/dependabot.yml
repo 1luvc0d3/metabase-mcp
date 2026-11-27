@@ -3,7 +3,9 @@
 #   fix(deps): ...       runtime dependencies  -> patch release, so users get the update
 #   chore(deps-dev): ... dev dependencies      -> no release
 #   ci(deps): ...        GitHub Actions        -> no release
-# Dev-dependency minor/patch groups auto-merge once CI passes (.github/workflows/dependabot-auto-merge.yml).
+# Groups are split by update type so each PR is either auto-mergeable or not: dev minor/patch,
+# runtime patch and actions minor/patch auto-merge once the required checks pass (rules in
+# .github/scripts/auto-merge-eligible.sh); runtime minor and all majors wait for a human.
 version: 2
 updates:
   - package-ecosystem: npm
@@ -17,9 +19,12 @@ updates:
       prefix-development: chore
       include: scope
     groups:
-      runtime-minor-patch:
+      runtime-patch:
         dependency-type: production
-        update-types: [minor, patch]
+        update-types: [patch]
+      runtime-minor:
+        dependency-type: production
+        update-types: [minor]
       dev-minor-patch:
         dependency-type: development
         update-types: [minor, patch]
@@ -52,3 +57,7 @@ updates:
     groups:
       actions:
         patterns: ['*']
+        update-types: [minor, patch]
+      actions-major:
+        patterns: ['*']
+        update-types: [major]

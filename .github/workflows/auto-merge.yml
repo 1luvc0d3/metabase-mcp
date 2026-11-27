@@ -1,0 +1,139 @@
+# Auto-merges low-risk PRs once the required checks pass. The rules are in
+# .github/scripts/auto-merge-eligible.sh: Dependabot dev minor/patch, runtime patch and GitHub
+# Actions minor/patch (not publish.yml), plus the maintenance routine's nightly LTS pin bumps.
+# Everything else (majors, release PRs, code) waits for a human.
+#
+# evaluate (every PR event): runs the rules from main (pull_request_target, so a PR can't change
+#   them; PR code is never checked out). An eligible head commit gets a passing
+#   `auto-merge/eligible` status. When a new push to a claude/* branch makes it ineligible,
+#   auto-merge is turned off again.
+#
+# sweep (push to main, every 30 minutes, or by hand): turns on squash auto-merge for PRs whose
+#   head commit carries that status, and updates PRs with auto-merge on that have fallen behind
+#   main (branch protection requires up-to-date branches). It uses RELEASE_PLEASE_TOKEN, because
+#   merges and pushes made with GITHUB_TOKEN don't trigger workflows: main would miss
+#   release-please, and an updated PR would never get its checks. Dependabot-triggered runs
+#   can't read that secret, which is why enabling happens here rather than in evaluate. The
+#   token needs Contents, Pull requests and Workflows read/write (these PRs change workflow
+#   files).
+name: Auto-merge
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [main]
+  schedule:
+    - cron: '7,37 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  evaluate:
+    if: github.event_name == 'pull_request_target'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: auto-merge-evaluate-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    permissions:
+      contents: write
+      pull-requests: write
+      statuses: write
+    steps:
+      # The base branch (main), not the PR: the rules must come from main.
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      - id: meta
+        if: github.event.pull_request.user.login == 'dependabot[bot]'
+        uses: dependabot/fetch-metadata@v3
+        with:
+          github-token: ${{ github.token }}
+
+      - id: decide
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          DEPS: ${{ steps.meta.outputs.updated-dependencies-json }}
+          ECOSYSTEM: ${{ steps.meta.outputs.package-ecosystem }}
+        run: .github/scripts/auto-merge-eligible.sh
+
+      - name: Mark the head commit eligible
+        if: steps.decide.outputs.eligible == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+          REASON: ${{ steps.decide.outputs.reason }}
+        run: |
+          gh api "repos/$REPO/statuses/$SHA" -f state=success -f context=auto-merge/eligible \
+            -f description="Auto-merges once checks pass: $REASON" >/dev/null
+
+      - name: Turn auto-merge off for an ineligible push
+        if: >-
+          steps.decide.outputs.eligible != 'true'
+          && startsWith(github.event.pull_request.head.ref, 'claude/')
+          && github.event.pull_request.auto_merge
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          REASON: ${{ steps.decide.outputs.reason }}
+        run: |
+          gh pr merge "$PR" -R "$REPO" --disable-auto
+          gh pr comment "$PR" -R "$REPO" --body "Turned auto-merge off: the latest push is no longer eligible ($REASON). A human needs to merge this one."
+
+  sweep:
+    if: github.event_name != 'pull_request_target'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: auto-merge-sweep
+      cancel-in-progress: false
+    steps:
+      - name: Turn on auto-merge for eligible PRs and keep them up to date
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::error::RELEASE_PLEASE_TOKEN is not set"
+            exit 1
+          fi
+          failed=0
+          prs=$(gh api "repos/$REPO/pulls?state=open&per_page=100" \
+            --jq '.[] | [.number, .head.sha, (.auto_merge != null)] | @tsv')
+          while IFS=$'\t' read -r pr sha auto; do
+            [ -n "$pr" ] || continue
+            if [ "$auto" = false ]; then
+              # Only a status that the evaluate job (github-actions) set on this exact commit counts.
+              ok=$(gh api "repos/$REPO/commits/$sha/statuses" --jq '
+                [.[] | select(.context == "auto-merge/eligible")][0]
+                | (. != null and .state == "success" and .creator.login == "github-actions[bot]")')
+              [ "$ok" = true ] || continue
+              echo "#$pr: eligible, turning on auto-merge"
+              if gh pr merge "$pr" -R "$REPO" --auto --squash --match-head-commit "$sha"; then
+                auto=true
+              else
+                echo "::warning::#$pr: could not turn on auto-merge"
+                failed=1
+                continue
+              fi
+            fi
+            [ "$auto" = true ] || continue
+            mergeable=$(gh api "repos/$REPO/pulls/$pr" --jq .mergeable_state)
+            echo "#$pr: auto-merge on, mergeable_state=$mergeable"
+            if [ "$mergeable" = behind ]; then
+              if gh api -X PUT "repos/$REPO/pulls/$pr/update-branch" -f expected_head_sha="$sha" >/dev/null; then
+                echo "#$pr: updated with main"
+              else
+                echo "::warning::#$pr: could not update the branch (does RELEASE_PLEASE_TOKEN have the Workflows permission?)"
+                failed=1
+              fi
+            fi
+          done <<<"$prs"
+          exit "$failed"
