@@ -7,6 +7,11 @@
 # a new LTS lands.
 #
 # Scheduled failures open (or comment on) a `nightly-e2e` issue; the next passing run closes it.
+#
+# It also runs on every PR. `e2e result` is a required check, so PRs (including auto-merged ones,
+# see auto-merge.yml) only merge when the pinned versions pass. On PRs a `latest` failure is
+# reported but doesn't block: a new Metabase release shouldn't freeze unrelated merges, and the
+# nightly run opens an issue for it.
 name: Nightly E2E
 
 on:
@@ -14,9 +19,6 @@ on:
     - cron: '17 6 * * *'
   workflow_dispatch:
   pull_request:
-    paths:
-      - 'tests/e2e/**'
-      - '.github/workflows/nightly.yml'
 
 permissions:
   contents: read
@@ -26,6 +28,7 @@ jobs:
     name: e2e (${{ matrix.metabase }})
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    continue-on-error: ${{ github.event_name == 'pull_request' && matrix.metabase == 'latest' }}
     strategy:
       fail-fast: false
       matrix:
@@ -56,6 +59,19 @@ jobs:
       - name: Metabase logs
         if: failure()
         run: docker logs --tail 200 metabase
+
+  # The required check. A skipped or cancelled run must not count as passing.
+  result:
+    name: e2e result
+    needs: e2e
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          RESULT: ${{ needs.e2e.result }}
+        run: |
+          echo "e2e: $RESULT"
+          [ "$RESULT" = success ]
 
   report:
     needs: e2e
