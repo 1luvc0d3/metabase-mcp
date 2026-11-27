@@ -32,7 +32,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        metabase: [v0.50.36, v0.64.7, latest]
+        metabase: [v0.50.36, v0.64.9.2, latest]
     steps:
       - uses: actions/checkout@v7
 
