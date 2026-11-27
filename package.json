@@ -1,7 +1,7 @@
 {
   "name": "@ai-1luvc0d3/metabase-mcp",
   "mcpName": "io.github.1luvc0d3/metabase-mcp",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "MCP server connecting Claude to Metabase for data analysis",
   "type": "module",
   "main": "dist/index.js",
