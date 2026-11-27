@@ -1,7 +1,7 @@
 {
   "name": "@ai-1luvc0d3/metabase-mcp",
   "mcpName": "io.github.1luvc0d3/metabase-mcp",
-  "version": "1.8.0",
+  "version": "2.0.0",
   "description": "MCP server connecting Claude to Metabase for data analysis",
   "type": "module",
   "main": "dist/index.js",
@@ -29,6 +29,9 @@
     "test:unit": "vitest run tests/unit",
     "test:integration": "vitest run tests/integration",
     "test:e2e": "node tests/e2e/smoke.mjs",
+    "demo:setup": "node demo/setup.mjs",
+    "demo:verify": "node demo/verify.mjs",
+    "demo:record": "node demo/record.mjs",
     "test:watch": "vitest",
     "validate-config": "node dist/validate-config.js",
     "build:mcpb": "npm run build && node scripts/build-mcpb.mjs"
@@ -45,7 +48,7 @@
   "author": "PyMlandBeyond",
   "license": "MIT",
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=22.12.0"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.52.0",
@@ -55,11 +58,12 @@
   },
   "devDependencies": {
     "@types/express": "^5.0.0",
-    "@types/node": "^20.0.0",
-    "@typescript-eslint/eslint-plugin": "^8.0.0",
-    "@typescript-eslint/parser": "^8.0.0",
+    "@types/node": "^22.20.5",
+    "@typescript-eslint/eslint-plugin": "^8.73.0",
+    "@typescript-eslint/parser": "^8.73.0",
     "eslint": "^9.0.0",
-    "typescript": "^5.0.0",
-    "vitest": "^4.0.0"
+    "playwright": "^1.56.1",
+    "typescript": "^6.0.3",
+    "vitest": "^5.1.0"
   }
 }

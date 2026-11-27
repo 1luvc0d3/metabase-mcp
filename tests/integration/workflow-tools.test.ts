@@ -196,6 +196,7 @@ describe('Workflow Tools Integration', () => {
       expect(data.completed).toBe(false);
       expect(data.steps[0].success).toBe(false);
       expect(data.steps[0].error).toContain('SQL validation failed');
+      expect(data.steps[0].error).toContain('DROP');
     });
 
     it('chains write steps with output references', async () => {

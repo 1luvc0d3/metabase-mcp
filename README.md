@@ -6,6 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Node](https://img.shields.io/node/v/@ai-1luvc0d3/metabase-mcp.svg)](https://nodejs.org)
 [![Glama score](https://glama.ai/mcp/servers/1luvc0d3/metabase-mcp/badges/score.svg)](https://glama.ai/mcp/servers/1luvc0d3/metabase-mcp)
+[![Metabase MCP on mcprush](https://mcprush.com/badge/1luvc0d3-metabase-mcp/score.svg)](https://mcprush.com/to/1luvc0d3-metabase-mcp?ref=badge)
 
 An [MCP](https://modelcontextprotocol.io/) server for [Metabase](https://www.metabase.com/) with API-key auth and production guardrails. It lets Claude and other AI agents query, explore and build in Metabase on any edition and any version, including from CI and behind a VPN.
 

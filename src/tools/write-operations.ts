@@ -8,7 +8,7 @@
 
 import { z } from 'zod';
 import type { ToolContext } from './types.js';
-import { SQLValidationError } from '../utils/errors.js';
+import { SQLValidationError, describeError } from '../utils/errors.js';
 
 export const BATCHABLE_WRITE_TOOLS = [
   'create_card',
@@ -121,7 +121,7 @@ export async function executeWriteOperation(
     return result;
   } catch (error) {
     if (error instanceof SQLValidationError) {
-      ctx.auditLogger.logBlocked(tool, error.message, auditDetails(tool, args));
+      ctx.auditLogger.logBlocked(tool, describeError(error), auditDetails(tool, args));
     } else {
       ctx.auditLogger.logFailure(tool, error as Error, auditDetails(tool, args));
     }

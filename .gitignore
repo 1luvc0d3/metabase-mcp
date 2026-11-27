@@ -32,3 +32,6 @@ coverage/
 # Temporary files
 *.tmp
 *.temp
+
+# Demo pipeline output (MCP configs with throwaway keys, clips, videos)
+demo/.out/

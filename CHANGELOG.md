@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.0.0](https://github.com/1luvc0d3/metabase-mcp/compare/v1.8.0...v2.0.0) (2026-11-18)
+
+
+### ⚠ BREAKING CHANGES
+
+* drop Node.js 20, require 22.12 or newer ([#93](https://github.com/1luvc0d3/metabase-mcp/issues/93))
+
+### Build System
+
+* drop Node.js 20, require 22.12 or newer ([#93](https://github.com/1luvc0d3/metabase-mcp/issues/93)) ([36e0e52](https://github.com/1luvc0d3/metabase-mcp/commit/36e0e524e5b71e86d15d1a993f3af061362966b3))
+
 ## [1.8.0](https://github.com/1luvc0d3/metabase-mcp/compare/v1.7.0...v1.8.0) (2026-11-17)
 
 
